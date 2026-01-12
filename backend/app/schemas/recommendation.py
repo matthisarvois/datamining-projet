@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - SCHEMAS
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 """

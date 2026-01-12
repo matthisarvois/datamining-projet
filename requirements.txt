@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - REQUIREMENTS
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 # ==========================================

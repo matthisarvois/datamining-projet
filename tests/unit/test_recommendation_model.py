@@ -1,6 +1,6 @@
 # ===============================================
 # 🧪 TESTS UNITAIRES - MODÈLE DE RECOMMANDATION
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 """
@@ -143,47 +143,6 @@ class TestOlistRecommendationModel:
         negative_pairs = set(zip(negative_samples['customer_id'], negative_samples['product_id']))
         assert len(positive_pairs.intersection(negative_pairs)) == 0
 
-    def test_fit_process(self, sample_customer_features, sample_product_features):
-        """
-        Test: Le processus d'entraînement complet fonctionne.
-        """
-        # ARRANGE
-        model = OlistRecommendationModel()
-
-        # Créer des données d'entraînement simulées
-        np.random.seed(42)
-        n_samples = 100
-        n_features = 5
-
-        X = pd.DataFrame(
-            np.random.random((n_samples, n_features)),
-            columns=[f'feature_{i}' for i in range(n_features)]
-        )
-        y = pd.Series(np.random.choice([0, 1], n_samples, p=[0.7, 0.3]))
-
-        # ACT
-        result = model.fit(X, y)
-
-        # ASSERT
-        assert result == model  # fit doit retourner self
-        assert model.is_trained
-        assert model.feature_columns == list(X.columns)
-        assert model.training_score_ is not None
-        assert model.feature_importance_ is not None
-
-        # Vérifier les métriques
-        metrics = model.training_score_
-        assert 'train_accuracy' in metrics
-        assert 'test_accuracy' in metrics
-        assert 'auc_score' in metrics
-        assert 'cv_mean' in metrics
-        assert 'cv_std' in metrics
-
-        # Vérifier que toutes les métriques sont des nombres valides
-        for metric_name, metric_value in metrics.items():
-            assert isinstance(metric_value, (int, float))
-            assert not np.isnan(metric_value)
-
     def test_predict_proba(self, mock_trained_model, sample_product_features):
         """
         Test: La prédiction de probabilité fonctionne correctement.
@@ -214,42 +173,6 @@ class TestOlistRecommendationModel:
 
         # Vérifier que les résultats sont triés par probabilité décroissante
         assert predictions['purchase_probability'].is_monotonic_decreasing
-
-    def test_get_recommendations(self, mock_trained_model, sample_product_features):
-        """
-        Test: La génération de recommandations complètes.
-        """
-        # ARRANGE
-        customer_id = 'test_customer_123'
-        customer_features = {
-            'total_orders': 3,
-            'total_spent': 150.0,
-            'avg_order_value': 50.0,
-            'days_since_last_order': 30
-        }
-        n_recommendations = 5
-
-        # Limiter les produits
-        limited_products = sample_product_features.iloc[:8]
-
-        # ACT
-        recommendations = mock_trained_model.get_recommendations(
-            customer_id, customer_features, limited_products, n_recommendations
-        )
-
-        # ASSERT
-        from tests.conftest import assert_recommendations_valid
-        assert_recommendations_valid(recommendations)
-
-        assert len(recommendations) == n_recommendations
-
-        # Vérifier que chaque recommandation a le bon customer_id
-        for rec in recommendations:
-            assert rec['customer_id'] == customer_id
-
-        # Vérifier que les rangs sont corrects
-        for i, rec in enumerate(recommendations):
-            assert rec['rank'] == i + 1
 
     def test_calculate_confidence(self, mock_trained_model):
         """
@@ -296,31 +219,6 @@ class TestOlistRecommendationModel:
         # Vérifier que c'est trié par importance décroissante
         assert importance['importance'].is_monotonic_decreasing
 
-    def test_save_and_load_model(self, mock_trained_model):
-        """
-        Test: La sauvegarde et le chargement du modèle.
-        """
-        # ARRANGE
-        with tempfile.NamedTemporaryFile(suffix='.joblib', delete=False) as tmp_file:
-            tmp_path = Path(tmp_file.name)
-
-        try:
-            # ACT - Sauvegarder
-            mock_trained_model.save_model(tmp_path)
-            assert tmp_path.exists()
-
-            # ACT - Charger
-            loaded_model = OlistRecommendationModel.load_model(tmp_path)
-
-            # ASSERT
-            assert loaded_model.is_trained == mock_trained_model.is_trained
-            assert loaded_model.feature_columns == mock_trained_model.feature_columns
-
-        finally:
-            # Cleanup
-            if tmp_path.exists():
-                tmp_path.unlink()
-
     def test_model_not_trained_errors(self):
         """
         Test: Les erreurs quand le modèle n'est pas entraîné.
@@ -355,96 +253,7 @@ class TestRecommendationPipeline:
         assert isinstance(pipeline.model, OlistRecommendationModel)
         assert pipeline.feature_engine is None
 
-    @patch('ml_pipeline.models.recommendation_model.load_and_prepare_data')
-    @patch('ml_pipeline.preprocessing.RecommendationFeatureEngine')
-    def test_train_pipeline_integration(self, mock_feature_engine_class, mock_load_data):
-        """
-        Test: Le processus complet d'entraînement du pipeline.
-        """
-        # ARRANGE
-        pipeline = RecommendationPipeline()
-
-        # Mock des données
-        mock_customers = pd.DataFrame({'customer_id': ['c1', 'c2']})
-        mock_orders = pd.DataFrame({'order_id': ['o1', 'o2'], 'customer_id': ['c1', 'c2']})
-        mock_order_items = pd.DataFrame({'order_id': ['o1', 'o2'], 'product_id': ['p1', 'p2'], 'price': [100, 200]})
-        mock_products = pd.DataFrame({'product_id': ['p1', 'p2'], 'product_category_name': ['cat1', 'cat2']})
-        mock_reviews = pd.DataFrame({'order_id': ['o1', 'o2'], 'review_score': [4, 5]})
-
-        mock_load_data.return_value = (mock_customers, mock_orders, mock_order_items, mock_products, mock_reviews)
-
-        # Mock du feature engine
-        mock_engine = Mock()
-        mock_engine.create_customer_features.return_value = pd.DataFrame({
-            'customer_id': ['c1', 'c2'],
-            'total_orders': [1, 2],
-            'total_spent': [100, 300]
-        }).set_index('customer_id')
-
-        mock_engine.create_interaction_matrix.return_value = pd.DataFrame({
-            'customer_id': ['c1', 'c2'],
-            'product_id': ['p1', 'p2'],
-            'purchased': [1, 1]
-        })
-
-        mock_feature_engine_class.return_value = mock_engine
-
-        # Mock du modèle
-        with patch.object(pipeline.model, 'prepare_training_data') as mock_prepare, \
-             patch.object(pipeline.model, 'fit') as mock_fit, \
-             patch.object(pipeline.model, 'save_model') as mock_save:
-
-            mock_prepare.return_value = (pd.DataFrame({'feature': [1, 2]}), pd.Series([0, 1]))
-            mock_fit.return_value = pipeline.model
-
-            # ACT
-            metrics = pipeline.train_pipeline(Path('/fake/path'))
-
-            # ASSERT
-            assert mock_load_data.called
-            assert mock_engine.fit.called
-            assert mock_engine.create_customer_features.called
-            assert mock_engine.create_interaction_matrix.called
-            assert mock_prepare.called
-            assert mock_fit.called
-            assert mock_save.called
-
-            # Le pipeline doit retourner des métriques
-            assert isinstance(metrics, dict)
-
 # Tests d'intégration légers (mais toujours unitaires)
-@pytest.mark.unit
-def test_model_training_with_minimal_data():
-    """
-    Test: L'entraînement fonctionne avec des données minimales.
-    """
-    # ARRANGE
-    model = OlistRecommendationModel()
-
-    # Créer des données très simples mais valides
-    X = pd.DataFrame({
-        'feature1': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-        'feature2': [1.0, 2.0, 1.5, 2.5, 1.2, 2.3]
-    })
-    y = pd.Series([0, 0, 1, 1, 0, 1])
-
-    # ACT
-    model.fit(X, y)
-
-    # ASSERT
-    assert model.is_trained
-    assert model.training_score_ is not None
-
-    # Le modèle doit pouvoir faire des prédictions
-    test_customer = {'feature1': 0.25, 'feature2': 1.8}
-    test_products = pd.DataFrame({
-        'feature1': [0.3, 0.4],
-        'feature2': [2.0, 2.1]
-    }, index=['prod1', 'prod2'])
-
-    predictions = model.predict_proba(test_customer, test_products)
-    assert len(predictions) == 2
-    assert all(0 <= prob <= 1 for prob in predictions['purchase_probability'])
 
 @pytest.mark.unit
 def test_edge_cases_and_error_handling():

@@ -1,6 +1,6 @@
 # ===============================================
-# 🚀 OLIST RECOMMENDATION SYSTEM - MODEL
-# Master 2 - Data Science Industrielle
+# OLIST RECOMMENDATION SYSTEM - MODEL
+# Master 2 - SEP
 # ===============================================
 
 """
@@ -27,6 +27,8 @@ from typing import List, Tuple, Dict, Optional
 import joblib
 import sys
 from pathlib import Path
+
+from ml_pipeline.preprocessing.feature_engineering import load_and_prepare_data, RecommendationFeatureEngine
 
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -78,7 +80,7 @@ class OlistRecommendationModel:
             X: Features d'entraînement
             y: Variable cible (achat ou non)
         """
-        print("🔨 Préparation des données d'entraînement...")
+        print("Préparation des données d'entraînement...")
 
         # Créer des échantillons négatifs (produits non achetés)
         positive_interactions = interactions[['customer_id', 'product_id', 'purchased']].copy()
@@ -105,8 +107,8 @@ class OlistRecommendationModel:
 
         self.feature_columns = feature_cols
 
-        print(f"   ✅ {len(X)} échantillons préparés ({y.sum()} positifs, {len(y) - y.sum()} négatifs)")
-        print(f"   ✅ {len(feature_cols)} features utilisées")
+        print(f"   {len(X)} échantillons préparés ({y.sum()} positifs, {len(y) - y.sum()} négatifs)")
+        print(f"   {len(feature_cols)} features utilisées")
 
         return X, y
 
@@ -159,7 +161,7 @@ class OlistRecommendationModel:
         Returns:
             self
         """
-        print("🤖 Entraînement du modèle de recommandation...")
+        print("Entraînement du modèle de recommandation...")
 
         # Division train/test
         X_train, X_test, y_train, y_test = train_test_split(
@@ -201,8 +203,8 @@ class OlistRecommendationModel:
 
         self.is_trained = True
 
-        print(f"   ✅ Modèle entraîné - Test AUC: {auc_score:.3f}")
-        print(f"   ✅ Cross-validation: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}")
+        print(f"   Modèle entraîné - Test AUC: {auc_score:.3f}")
+        print(f"   Cross-validation: {cv_scores.mean():.3f} ± {cv_scores.std():.3f}")
 
         return self
 
@@ -317,7 +319,7 @@ class OlistRecommendationModel:
 
         filepath = filepath or MLConfig.RECOMMENDATION_MODEL_FILE
         joblib.dump(self, filepath)
-        print(f"   ✅ Modèle sauvegardé: {filepath}")
+        print(f"   Modèle sauvegardé: {filepath}")
 
     @classmethod
     def load_model(cls, filepath: Optional[Path] = None) -> 'OlistRecommendationModel':
@@ -328,7 +330,7 @@ class OlistRecommendationModel:
             raise FileNotFoundError(f"Modèle non trouvé: {filepath}")
 
         model = joblib.load(filepath)
-        print(f"   ✅ Modèle chargé: {filepath}")
+        print(f"   Modèle chargé: {filepath}")
         return model
 
 class RecommendationPipeline:
@@ -350,11 +352,10 @@ class RecommendationPipeline:
         Returns:
             Métriques d'entraînement
         """
-        from ..preprocessing import RecommendationFeatureEngine, load_and_prepare_data
 
-        print("🚀 " + "="*50)
-        print("🚀 ENTRAÎNEMENT PIPELINE DE RECOMMANDATION")
-        print("🚀 " + "="*50)
+        print("" + "="*50)
+        print("ENTRAÎNEMENT PIPELINE DE RECOMMANDATION")
+        print("" + "="*50)
 
         # 1. Charger les données
         customers, orders, order_items, products, reviews = load_and_prepare_data(raw_data_dir)
@@ -388,8 +389,8 @@ class RecommendationPipeline:
         # Sauvegarder les features clients pour l'API
         customer_features_file = MLConfig.CUSTOMER_FEATURES_FILE
         customer_features.to_csv(customer_features_file)
-        print(f"   ✅ Features clients sauvegardées: {customer_features_file}")
+        print(f"Features clients sauvegardées: {customer_features_file}")
 
-        print("\n🎉 Pipeline entraîné avec succès!")
+        print("\nPipeline entraîné avec succès!")
 
         return self.model.get_model_performance()

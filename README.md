@@ -1,31 +1,33 @@
 # 🛒 Olist Recommendation System
 
-**Système de Recommandation E-commerce - Master 2 Data Science Industrielle**
+**Système de Recommandation E-commerce - Master 2 SEP**
+
+Mohamed TRIBAK
 
 ---
 
-## 🎯 Vue d'ensemble du Projet
+## Vue d'ensemble du Projet
 
 Ce projet implémente un **système de recommandation complet** pour la plateforme e-commerce Olist. Il démontre l'intégration de machine learning en production avec une architecture moderne séparant le frontend du backend.
 
-### 📋 Objectifs Pédagogiques
+### Objectifs Pédagogiques
 
-- **🤖 Machine Learning en production** : Pipeline complet de données, entraînement et déploiement
-- **🏗️ Architecture logicielle moderne** : API REST, microservices, séparation des responsabilités
-- **📊 Data Science appliquée** : Feature engineering, validation de modèle, métriques business
-- **🛠️ Stack technologique actuelle** : FastAPI, Streamlit, scikit-learn, Docker
+- **Machine Learning en production** : Pipeline complet de données, entraînement et déploiement
+- **Architecture logicielle moderne** : API REST, microservices, séparation des responsabilités
+- **Data Science appliquée** : Feature engineering, validation de modèle, métriques business
+- **Stack technologique actuelle** : FastAPI, Streamlit, scikit-learn
 
-### 🎪 Démonstration
+### Démonstration
 
 Le système permet de :
-- 🎯 Générer des recommandations personnalisées pour chaque client
-- 📊 Visualiser les performances du modèle ML en temps réel
-- 🔍 Explorer les données et analyser les patterns
-- 🚀 Tester l'API via une interface utilisateur intuitive
+- Générer des recommandations personnalisées pour chaque client
+- Visualiser les performances du modèle ML en temps réel
+- Explorer les données et analyser les patterns
+- Tester l'API via une interface utilisateur intuitive
 
 ---
 
-## 🏗️ Architecture du Système
+## Architecture du Système
 
 ```mermaid
 graph TB
@@ -40,7 +42,7 @@ graph TB
     H --> F
 ```
 
-### 🧩 Composants Principaux
+### Composants Principaux
 
 | Composant | Technologie | Responsabilité |
 |-----------|-------------|----------------|
@@ -52,9 +54,9 @@ graph TB
 
 ---
 
-## 🚀 Installation et Configuration
+## Installation et Configuration
 
-### 📋 Prérequis
+### Prérequis
 
 - **Python 3.8+**
 - **UV** (gestionnaire de packages nouvelle génération) **[RECOMMANDÉ]**
@@ -70,107 +72,58 @@ graph TB
 git clone <url-du-repo>
 cd olist_recommendation_system
 
-# 2. Installation automatique d'UV + setup complet
-python setup_uv.py
-
-# OU étape par étape :
-
 # Installation d'UV
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
-# irm https://astral.sh/uv/install.ps1 | iex    # Windows
+pip install uv 
 
-# Setup complet en 1 commande
-uv sync --extra dev --extra test
+# Setup complet
+uv sync 
 
 # Génération données + entraînement
-uv run python scripts/generate_demo_data.py
-uv run python ml_pipeline/train_model.py --use-demo-data
+uv run python setup.py
+uv run python ml_pipeline/train_model.py
 ```
 
-### 🎯 Installation Alternative avec pip
+### Installation Alternative avec pip
 
 ```bash
 # Méthode traditionnelle (plus lente mais compatible)
 pip install -r requirements.txt
 python setup.py
-python scripts/generate_demo_data.py
-python ml_pipeline/train_model.py --use-demo-data
+python ml_pipeline/train_model.py
 ```
 
-### ⚔️ Comparaison pip vs UV
+## Lancement de l'Application
 
-Testez la différence vous-même :
+### Avec UV (Recommandé - Plus Rapide)
 
-```bash
-# Démonstration des gains de performance
-python setup_uv.py --compare
-
-# Ou via Make/PowerShell
-make compare-managers         # Linux/Mac
-.\scripts.ps1 CompareManagers # Windows
-```
-
-### 🐳 Alternative avec Docker
-
-```bash
-docker-compose up --build
-```
-
----
-
-## 🎮 Lancement de l'Application
-
-### ⚡ Avec UV (Recommandé - Plus Rapide)
-
-#### 1. 🚀 Démarrer le Backend (Terminal 1)
+#### 1. Démarrer le Backend (Terminal 1)
 
 ```bash
 # Lancer l'API FastAPI avec UV
 uv run uvicorn backend.app.main:app --reload
 
-# Ou via les scripts automatisés
-make run-api         # Linux/Mac
-.\scripts.ps1 RunAPI # Windows
-
 # L'API sera disponible sur http://localhost:8000
 # Documentation interactive : http://localhost:8000/docs
 ```
 
-#### 2. 🎨 Démarrer le Frontend (Terminal 2)
+#### 2. Démarrer le Frontend (Terminal 2)
 
 ```bash
 # Lancer l'interface Streamlit avec UV
 uv run streamlit run frontend/app.py
 
-# Ou via les scripts automatisés
-make run-frontend         # Linux/Mac
-.\scripts.ps1 RunFrontend # Windows
-
 # L'interface sera disponible sur http://localhost:8501
 ```
 
-#### 3. 🧪 Tests et Validation
+#### 3. Tests et Validation
 
 ```bash
 # Tests rapides
 uv run pytest tests/ -m "not slow" -v
-
-# Ou via scripts
-make test              # Linux/Mac
-.\scripts.ps1 Test     # Windows
 ```
 
-### 🐌 Alternative avec pip
 
-```bash
-# Terminal 1
-uvicorn backend.app.main:app --reload
-
-# Terminal 2
-streamlit run frontend/app.py
-```
-
-### 🎯 Vérification du Système
+### Vérification du Système
 
 1. **Santé de l'API** : http://localhost:8000/health
 2. **Documentation** : http://localhost:8000/docs
@@ -178,19 +131,18 @@ streamlit run frontend/app.py
 
 ---
 
-## 📊 Utilisation du Système
+## Utilisation du Système
 
-### 🎯 Génération de Recommandations
+### Génération de Recommandations
 
 #### Via l'Interface Streamlit
 
 1. Sélectionner un client dans la liste
 2. Choisir le nombre de recommandations
-3. Cliquer sur "🚀 Générer les recommandations"
+3. Cliquer sur "Générer les recommandations"
 4. Analyser les résultats et visualisations
 
 #### Via l'API REST
-
 ```bash
 # Obtenir des recommandations
 curl -X POST "http://localhost:8000/api/v1/recommendations" \
@@ -204,20 +156,20 @@ curl "http://localhost:8000/api/v1/customers"
 curl "http://localhost:8000/api/v1/model/info"
 ```
 
-### 📈 Analyse des Performances
+### Analyse des Performances
 
 Le système fournit plusieurs métriques :
 
-- **📊 Précision** : Train/Test accuracy
-- **📈 AUC-ROC** : Capacité de discrimination
-- **🎯 Cross-validation** : Robustesse du modèle
-- **🔍 Feature importance** : Variables les plus prédictives
+- **Précision** : Train/Test accuracy
+- **AUC-ROC** : Capacité de discrimination
+- **Cross-validation** : Robustesse du modèle
+- **Feature importance** : Variables les plus prédictives
 
 ---
 
-## 🧠 Machine Learning Pipeline
+## Machine Learning Pipeline
 
-### 🔨 Feature Engineering
+### Feature Engineering
 
 Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichie :
 
@@ -232,7 +184,7 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 - unique_products_bought # Diversité des achats
 ```
 
-### 🤖 Modèle de Recommandation
+### Modèle de Recommandation
 
 **RandomForest Classifier** avec :
 - **100 arbres** pour la robustesse
@@ -240,7 +192,7 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 - **Échantillonnage stratifié** des exemples négatifs
 - **Validation croisée 5-fold**
 
-### 📊 Évaluation du Modèle
+### Évaluation du Modèle
 
 ```python
 # Métriques calculées automatiquement
@@ -252,8 +204,7 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 ```
 
 ---
-
-## 🗂️ Structure du Projet
+## Structure du Projet
 
 ```
 olist_recommendation_system/
@@ -287,66 +238,23 @@ olist_recommendation_system/
 └── README.md                 # Ce fichier
 ```
 
----
+## Exercices pour les Étudiants
 
-## 🌟 Pourquoi UV pour les Data Scientists ?
+### Niveau Débutant
 
-Ce projet utilise **UV**, le gestionnaire de packages Python nouvelle génération. Voici pourquoi c'est crucial pour votre formation :
-
-### ⚡ **Performance Révolutionnaire**
-
-| Opération | pip | UV | Gain |
-|-----------|-----|-----|------|
-| Installation complète | 45s | 4s | **11x plus rapide** |
-| Résolution dépendances | 8s | 0.3s | **27x plus rapide** |
-| Création environnement | 15s | 0.8s | **19x plus rapide** |
-
-### 🧠 **Avantages Pédagogiques**
-
-- **⏱️ Plus de temps pour le ML** : Moins d'attente = plus de focus sur l'apprentissage
-- **🔒 Reproductibilité garantie** : Vos projets fonctionnent partout, toujours
-- **🌍 Environnements propres** : Fini les conflits de dépendances
-- **🚀 Standards modernes** : Préparez-vous pour l'industrie
-
-### 💡 **Workflows Simplifiés**
-
-```bash
-# AVANT (pip + venv)
-python -m venv .venv
-source .venv/bin/activate  # ou .venv\Scripts\activate sur Windows
-pip install -r requirements.txt
-python train_model.py
-
-# APRÈS (uv) - Plus simple, plus rapide
-uv sync                      # Setup automatique
-uv run python train_model.py # Exécution directe !
-```
-
-### 🎯 **Message aux Étudiants**
-
-> **UV représente le futur de Python.** En tant que futurs data scientists, maîtriser UV vous donne un avantage concurrentiel. Vous développez plus vite, avec moins d'erreurs, et vos projets sont plus reproductibles.
-
-**📚 Guide complet** : Consultez `MIGRATION_UV.md` pour comprendre tous les avantages d'UV vs pip.
-
----
-
-## 🎓 Exercices pour les Étudiants
-
-### 🔰 Niveau Débutant
-
-1. **🎯 Test des recommandations**
+1. **Test des recommandations**
    - Tester avec différents clients
    - Observer les variations de probabilité
    - Analyser les recommandations les plus fréquentes
 
-2. **📊 Analyse des features**
+2. **Analyse des features**
    - Examiner l'importance des variables
    - Comprendre l'impact de chaque feature
    - Identifier les features les plus prédictives
 
-### 🔥 Niveau Intermédiaire
+### Niveau Intermédiaire
 
-3. **⚡ Optimisation des hyperparamètres**
+3. **Optimisation des hyperparamètres**
    ```python
    # Modifier dans config.py
    RANDOM_FOREST_PARAMS = {
@@ -357,38 +265,19 @@ uv run python train_model.py # Exécution directe !
    }
    ```
 
-4. **📈 Nouvelles métriques**
-   - Implémenter Precision@K
-   - Calculer la diversité des recommandations
-   - Mesurer le temps de réponse
-
-5. **🔄 Algorithmes alternatifs**
+4. **Algorithmes alternatifs**
    - Tester XGBoost
    - Essayer LightGBM
    - Comparer les performances
 
-### 🚀 Niveau Avancé
-
-6. **🏗️ Architecture avancée**
-   - Ajouter une base de données PostgreSQL
-   - Implémenter un cache Redis
-   - Créer des tests automatisés
-
-7. **📊 Métriques business**
-   - A/B testing des recommandations
-   - Simulation de revenus générés
-   - Analyse de la diversité des recommandations
-
-8. **🐳 Déploiement**
+5**Déploiement**
    - Conteneuriser avec Docker
-   - Déployer sur cloud (Heroku, AWS)
-   - Setup CI/CD avec GitHub Actions
 
----
+--
 
-## 🧪 Tests et Validation
+## Tests et Validation
 
-### ✅ Tests Manuels
+### Tests Manuels
 
 ```bash
 # 1. Vérifier l'API
@@ -403,107 +292,19 @@ curl -X POST "http://localhost:8000/api/v1/recommendations" \
 curl http://localhost:8000/api/v1/model/info
 ```
 
-### ✅ Tests Automatisés
+### Tests Automatisés
 
-#### Avec UV (Recommandé)
+#### Avec UV
 ```bash
-# Tests rapides
-uv run python run_tests.py
-# ou
-make test
-.\scripts.ps1 Test
-
-# Tests spécifiques
-uv run python run_tests.py --unit        # Tests unitaires
-uv run python run_tests.py --integration # Tests d'intégration
-uv run python run_tests.py --e2e         # Tests end-to-end
-uv run python run_tests.py --coverage    # Avec couverture
-
-# Tests via pytest directement
+# Tests via pytest 
 uv run pytest tests/ -v
 ```
 
-#### Alternative avec pip
-```bash
-pytest tests/
-pytest tests/unit/
-pytest tests/integration/
-```
-
-### 🎮 Scripts d'Automatisation
-
-Le projet inclut des scripts pour automatiser les tâches courantes :
-
-#### 🐧 Linux/macOS (Makefile)
-```bash
-make help                 # Aide complète
-make student-setup        # Setup optimisé étudiants
-make compare-managers     # Comparaison pip vs uv
-make train               # Entraîner le modèle
-make test-coverage       # Tests avec couverture
-```
-
-#### 🪟 Windows (PowerShell)
-```powershell
-.\scripts.ps1 Help                # Aide complète
-.\scripts.ps1 StudentSetup        # Setup optimisé étudiants
-.\scripts.ps1 CompareManagers     # Comparaison pip vs uv
-.\scripts.ps1 Train              # Entraîner le modèle
-.\scripts.ps1 TestCoverage       # Tests avec couverture
-```
-
 ---
 
-## 🐛 Résolution de Problèmes
+## Ressources et Documentation
 
-### ❌ Problèmes Courants
-
-**🔌 API non accessible**
-```bash
-# Vérifier que FastAPI tourne
-ps aux | grep uvicorn
-
-# Relancer si nécessaire
-uvicorn backend.app.main:app --reload
-```
-
-**📊 Modèle non trouvé**
-```bash
-# Réentraîner le modèle
-python ml_pipeline/train_model.py --use-demo-data --force-demo
-```
-
-**💾 Données manquantes**
-```bash
-# Régénérer les données de démo
-python scripts/generate_demo_data.py
-```
-
-**🐍 Problèmes de dépendances**
-```bash
-# Réinstaller proprement
-pip uninstall -r requirements.txt -y
-pip install -r requirements.txt
-```
-
-### 🔧 Debug et Logs
-
-```bash
-# Vérifier les logs API
-tail -f logs/olist_api.log
-
-# Debug Streamlit
-streamlit run frontend/app.py --logger.level=debug
-
-# Verbose mode pour l'entraînement
-python ml_pipeline/train_model.py --verbose
-```
-
----
-
-## 📚 Ressources et Documentation
-
-### 📖 Documentation Technique
+### Documentation Technique
 
 - **[FastAPI](https://fastapi.tiangolo.com/)** : Framework API moderne
 - **[Streamlit](https://streamlit.io/)** : Création d'apps data science
@@ -511,14 +312,14 @@ python ml_pipeline/train_model.py --verbose
 - **[Pandas](https://pandas.pydata.org/)** : Manipulation de données
 - **[Plotly](https://plotly.com/python/)** : Visualisations interactives
 
-### 🎓 Concepts Clés
+### Concepts Clés
 
 - **Recommender Systems** : Collaborative filtering, content-based
 - **Feature Engineering** : RFM analysis, behavioral features
 - **API Design** : REST principles, OpenAPI documentation
 - **MLOps** : Model deployment, monitoring, versioning
 
-### 📊 Dataset Olist
+### Dataset Olist
 
 - **[Kaggle Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)** : Dataset original
 - **Structure relationnelle** : Clients, commandes, produits, reviews
@@ -526,9 +327,9 @@ python ml_pipeline/train_model.py --verbose
 
 ---
 
-## 🤝 Contribution et Amélioration
+## Contribution et Amélioration
 
-### 🔄 Workflow de Développement
+### Workflow de Développement
 
 1. **Fork** le repository
 2. Créer une **branche feature** : `git checkout -b feature/nouvelle-feature`
@@ -536,21 +337,11 @@ python ml_pipeline/train_model.py --verbose
 4. **Pusher** la branche : `git push origin feature/nouvelle-feature`
 5. Ouvrir une **Pull Request**
 
-### 💡 Idées d'Amélioration
-
-- 🔄 **Réentraînement automatique** : Scheduler pour retrainer périodiquement
-- 🎯 **Recommandations temps réel** : Streaming avec Apache Kafka
-- 🧠 **Deep Learning** : Réseaux de neurones avec TensorFlow/PyTorch
-- 📱 **Interface mobile** : React Native ou Flutter
-- 🔐 **Authentification** : OAuth2, JWT tokens
-- 📈 **Monitoring avancé** : Prometheus, Grafana, Elastic Stack
-
 ---
 
-## 📊 Métriques de Succès du Projet
+## Métriques de Succès du Projet
 
-### 🎯 Objectifs d'Apprentissage
-
+### Objectifs d'Apprentissage
 | Compétence | Niveau Attendu | Validation |
 |------------|---------------|------------|
 | **ML Pipeline** | Maîtrise | Modèle entraîné avec AUC > 0.7 |
@@ -559,25 +350,18 @@ python ml_pipeline/train_model.py --verbose
 | **Data Engineering** | Intermédiaire | Features créées correctement |
 | **Architecture** | Intermédiaire | Séparation front/back respectée |
 
-### 📈 KPIs Techniques
-
-- ✅ **API Response Time** < 200ms
-- ✅ **Model Training Time** < 5 minutes
-- ✅ **Test Coverage** > 80% (objectif)
-- ✅ **Documentation** complète et à jour
-
 ---
 
-## 🏆 Conclusion
+## Conclusion
 
 Ce projet **Olist Recommendation System** vous donne une expérience complète du machine learning en production. Vous apprendrez :
 
-- 🤖 **Machine Learning** appliqué à un cas d'usage réel
-- 🏗️ **Architecture logicielle** moderne et scalable
-- 📊 **Data Science** orientée business et utilisateur
-- 🛠️ **Technologies actuelles** utilisées en entreprise
+- **Machine Learning** appliqué à un cas d'usage réel
+- **Architecture logicielle** moderne et scalable
+- **Data Science** orientée business et utilisateur
+- **Technologies actuelles** utilisées en entreprise
 
-**🎯 Mission accomplie quand :**
+**Mission accomplie quand :**
 - Votre API répond aux requêtes de recommandation
 - Votre interface Streamlit affiche les résultats
 - Votre modèle a des performances acceptables
@@ -585,17 +369,10 @@ Ce projet **Olist Recommendation System** vous donne une expérience complète d
 
 ---
 
-## 🎉 Bonne chance dans votre projet !
-
-**Questions ? Problèmes ?**
-- 📧 Contactez votre enseignant
-- 🐛 Ouvrez une issue GitHub
-- 💬 Échangez avec vos camarades
-
+## Bonne chance dans votre projet !
 **🚀 Ready to build the future of e-commerce recommendations? Let's code!** ✨
-
 ---
 
-*Dernière mise à jour : Janvier 2025*
+*Dernière mise à jour : Décembre 2025*
 *Version : 1.0.0*
-*Auteur : Claude Code pour Master 2 Data Science Industrielle*
+*Auteur : Mohamed TRIBAK pour Master 2 SEP*

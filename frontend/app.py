@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - STREAMLIT APP
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 """
@@ -107,7 +107,7 @@ def main():
     # Header principal
     st.markdown("""
     # 🛒 Olist Recommendation System
-    ## Master 2 - Data Science Industrielle
+    ## Master 2 - SEP
 
     **Interface de démonstration du système de recommandation e-commerce**
     """)
@@ -133,7 +133,6 @@ def main():
                 "🎯 Recommandations",
                 "📊 Performance du Modèle",
                 "🔍 Analyse des Données",
-                "ℹ️ À propos"
             ]
         )
 
@@ -153,8 +152,6 @@ def main():
         show_model_performance_page()
     elif page == "🔍 Analyse des Données":
         show_data_analysis_page()
-    else:
-        show_about_page()
 
 def show_recommendations_page():
     """Page principale de génération de recommandations."""
@@ -245,29 +242,7 @@ def display_recommendations(data):
                 st.write(f"**Probabilité:** {rec['purchase_probability']:.3f}")
                 st.write(f"**Confiance:** {rec['confidence']}")
 
-            with col2:
-                # Gauge chart pour la probabilité
-                fig_gauge = go.Figure(go.Indicator(
-                    mode = "gauge+number",
-                    value = rec['purchase_probability'],
-                    title = {'text': "Probabilité d'achat"},
-                    gauge = {
-                        'axis': {'range': [None, 1]},
-                        'bar': {'color': "darkgreen"},
-                        'steps': [
-                            {'range': [0, 0.4], 'color': "lightgray"},
-                            {'range': [0.4, 0.7], 'color': "yellow"},
-                            {'range': [0.7, 1], 'color': "lightgreen"}
-                        ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 0.8
-                        }
-                    }
-                ))
-                fig_gauge.update_layout(height=200)
-                st.plotly_chart(fig_gauge, use_container_width=True)
+
 
 def show_model_performance_page():
     """Page d'analyse des performances du modèle."""
@@ -432,100 +407,6 @@ def show_data_analysis_page():
         }
     )
     st.plotly_chart(fig_segments, use_container_width=True)
-
-def show_about_page():
-    """Page d'informations sur le projet."""
-
-    st.markdown("## ℹ️ À propos du projet")
-
-    st.markdown("""
-    ### 🎯 Objectif Pédagogique
-
-    Ce projet de **système de recommandation Olist** est conçu pour enseigner aux étudiants de Master 2 :
-
-    - 🤖 **Machine Learning en production** : Pipeline complet de données, entraînement et déploiement
-    - 🏗️ **Architecture logicielle** : Séparation front/back, API REST, services
-    - 📊 **Data Science appliquée** : Feature engineering, évaluation de modèle, métriques business
-    - 🛠️ **Technologies modernes** : FastAPI, Streamlit, scikit-learn, Docker
-
-    ### 🏗️ Architecture Technique
-
-    **Backend (FastAPI):**
-    - API REST pour les recommandations
-    - Service layer pour la logique métier
-    - Pipeline ML avec RandomForest
-    - Cache et optimisations
-
-    **Frontend (Streamlit):**
-    - Interface utilisateur intuitive
-    - Visualisations interactives
-    - Tests en temps réel
-    - Dashboard de monitoring
-
-    **Machine Learning:**
-    - Modèle RandomForest (scikit-learn)
-    - Features RFM (Récence, Fréquence, Montant)
-    - Validation croisée et métriques
-    - Pipeline de preprocessing
-
-    ### 📚 Ressources d'Apprentissage
-
-    **Ce que vous apprenez avec ce projet :**
-
-    1. **Data Engineering** : Transformation et préparation des données
-    2. **Feature Engineering** : Création de variables prédictives pertinentes
-    3. **Modeling** : Entraînement et évaluation d'un modèle de ML
-    4. **API Development** : Création d'API REST robustes
-    5. **Frontend Development** : Interfaces utilisateur pour la data science
-    6. **MLOps** : Déploiement et monitoring de modèles ML
-
-    ### 🚀 Prochaines Étapes
-
-    **Améliorations possibles :**
-    - 🔄 Réentraînement automatique du modèle
-    - 📊 Métriques business avancées (Precision@K, diversité)
-    - 🐳 Conteneurisation avec Docker
-    - 🗄️ Base de données PostgreSQL
-    - ⚡ Cache Redis pour les performances
-    - 📈 Monitoring avec Prometheus/Grafana
-
-    ### 👨‍🎓 Pour les Étudiants
-
-    **Exercices suggérés :**
-    1. Ajouter de nouvelles features au modèle
-    2. Tester différents algorithmes (XGBoost, LightGBM)
-    3. Implémenter des métriques de recommandation avancées
-    4. Créer des tests automatisés
-    5. Optimiser les performances de l'API
-    6. Ajouter une authentification utilisateur
-    """)
-
-    # Informations techniques
-    with st.expander("🔧 Détails Techniques"):
-        st.code("""
-        Technologies utilisées:
-        - Python 3.8+
-        - FastAPI 0.95+ (Backend API)
-        - Streamlit 1.20+ (Frontend)
-        - scikit-learn 1.1+ (Machine Learning)
-        - Pandas, NumPy (Data Processing)
-        - Plotly (Visualisations)
-        - Pydantic (Validation des données)
-        - Uvicorn (Serveur ASGI)
-
-        Structure du projet:
-        ├── backend/           # API FastAPI
-        │   ├── app/
-        │   │   ├── routers/   # Routes API
-        │   │   ├── services/  # Logique métier
-        │   │   └── schemas/   # Validation Pydantic
-        ├── frontend/          # Interface Streamlit
-        ├── ml_pipeline/       # Pipeline ML
-        │   ├── models/        # Modèles ML
-        │   ├── preprocessing/ # Feature engineering
-        │   └── training/      # Scripts d'entraînement
-        └── data/              # Données
-        """)
 
 if __name__ == "__main__":
     main()

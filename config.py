@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - CONFIG
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 import os
@@ -43,6 +43,7 @@ class MLConfig:
     RECOMMENDATION_MODEL_FILE = MODELS_DIR / "recommendation_model.joblib"
     FEATURE_PIPELINE_FILE = MODELS_DIR / "feature_pipeline.joblib"
     CUSTOMER_FEATURES_FILE = PROCESSED_DATA_DIR / "customer_features.csv"
+    PRODUCT_FEATURES_FILE = RAW_DATA_DIR / "olist_products_dataset.csv"
 
 # ==========================================
 # 🚀 API CONFIGURATION

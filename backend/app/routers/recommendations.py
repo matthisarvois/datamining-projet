@@ -1,6 +1,6 @@
 # ===============================================
 # 🚀 OLIST RECOMMENDATION SYSTEM - ROUTERS
-# Master 2 - Data Science Industrielle
+# Master 2 - SEP
 # ===============================================
 
 """
@@ -21,7 +21,7 @@ from datetime import datetime
 
 from ..schemas.recommendation import (
     CustomerRequest, RecommendationResponse, ModelInfoResponse,
-    HealthResponse, ErrorResponse, BatchRecommendationRequest,
+    HealthResponse, BatchRecommendationRequest,
     BatchRecommendationResponse
 )
 from ..services.recommendation_service import recommendation_service
@@ -90,57 +90,6 @@ async def get_recommendations(request: CustomerRequest):
             detail=f"Erreur lors de la génération de recommandations: {str(e)}"
         )
 
-@router.post("/recommendations/batch", response_model=BatchRecommendationResponse, summary="📦 Recommandations en lot")
-async def get_batch_recommendations(request: BatchRecommendationRequest):
-    """
-    Génère des recommandations pour plusieurs clients simultanément.
-
-    **Paramètres:**
-    - **customer_ids**: Liste des IDs clients (max 100)
-    - **n_recommendations**: Nombre de recommandations par client
-
-    **Réponse:**
-    - Recommandations pour chaque client
-    - Temps de traitement total
-    - Statistiques de traitement
-
-    **Utilisation recommandée:**
-    - Traitement par lots pour optimiser les performances
-    - Export de recommandations pour campagnes marketing
-    """
-    try:
-        start_time = time.time()
-        logger.info(f"📦 Traitement en lot de {len(request.customer_ids)} clients")
-
-        results = []
-        for customer_id in request.customer_ids:
-            try:
-                response = await recommendation_service.get_recommendations(
-                    customer_id=customer_id,
-                    n_recommendations=request.n_recommendations
-                )
-                results.append(response)
-            except Exception as e:
-                logger.warning(f"⚠️ Erreur pour le client {customer_id}: {e}")
-                # Continuer avec les autres clients
-
-        processing_time = time.time() - start_time
-
-        logger.info(f"✅ Lot traité: {len(results)}/{len(request.customer_ids)} clients")
-
-        return BatchRecommendationResponse(
-            results=results,
-            total_customers=len(results),
-            processing_time_seconds=processing_time
-        )
-
-    except Exception as e:
-        logger.error(f"❌ Erreur lors du traitement en lot: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors du traitement en lot: {str(e)}"
-        )
-
 @router.get("/model/info", response_model=ModelInfoResponse, summary="🤖 Informations sur le modèle")
 async def get_model_info():
     """
@@ -171,7 +120,7 @@ async def get_model_info():
 
 @router.get("/customers", response_model=List[str], summary="👥 Liste des clients")
 async def get_customers(
-    limit: int = Query(default=50, ge=1, le=500, description="Nombre maximum de clients à retourner")
+    limit: int = Query(default=1000, ge=1, le=1000, description="Nombre maximum de clients à retourner")
 ):
     """
     Retourne la liste des clients disponibles pour les recommandations.
@@ -238,7 +187,7 @@ async def get_recommendations_by_path(
             detail=f"Erreur lors de la génération de recommandations: {str(e)}"
         )
 
-# Routes de debugging et monitoring (utiles pour les étudiants)
+# Routes de debugging et monitoring
 
 @router.get("/debug/cache/stats", summary="🔍 Statistiques du cache")
 async def get_cache_stats():
