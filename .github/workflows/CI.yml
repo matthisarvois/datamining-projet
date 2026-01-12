@@ -65,7 +65,6 @@ jobs:
   typecheck:
     name: typecheck (mypy)
     runs-on: self-hosted
-    needs: lint
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -108,20 +107,23 @@ jobs:
 
       - name: Run mypy
         run: |
-          if [ -d src ]; then
-            echo "Running mypy on src/"
-            uv run mypy --ignore-missing-imports src
-          elif [ -d app ]; then
-            echo "Running mypy on app/"
-            uv run mypy --ignore-missing-imports app
-          else
-            echo "No 'src/' or 'app/' directory found; skipping mypy."
+          targets=""
+          [ -d backend ] && targets="$targets backend"
+          [ -d frontend ] && targets="$targets frontend"
+          [ -d ml_pipeline ] && targets="$targets ml_pipeline"
+          [ -d scripts ] && targets="$targets scripts"
+
+          if [ -z "$targets" ]; then
+            echo "No code directories found among: backend/ frontend/ ml_pipeline/ scripts/ — skipping mypy."
+            exit 0
           fi
+
+          echo "Running mypy on:$targets"
+          uv run mypy --ignore-missing-imports $targets
 
   audit:
     name: audit (pip-audit)
     runs-on: self-hosted
-    needs: typecheck
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -162,7 +164,7 @@ jobs:
   test:
     name: test (pytest + behave)
     runs-on: self-hosted
-    needs: audit
+    needs: [lint, typecheck, audit]
     steps:
       - uses: actions/checkout@v4
         with:
