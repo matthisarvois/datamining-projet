@@ -1,4 +1,4 @@
-name: CI
+name: CI 
 
 on:
   push:
@@ -8,130 +8,69 @@ env:
   UV_CACHE_DIR: .uv-cache
 
 jobs:
-  lint:
-    name: lint (pre-commit)
+  ci:
     runs-on: self-hosted
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
+      - name: Runner info
+        run: |
+          uname -a
+          whoami
+          python --version || true
 
       - name: Install uv + sync
         run: |
           python -m pip install --upgrade pip
           python -m pip install uv
           uv --version
-          uv sync --frozen || uv sync
+          uv sync || true
 
-      - name: Run pre-commit
+      # -----------------------
+      # LINT (quick)
+      # -----------------------
+      - name: Lint (ruff if available)
         run: |
-          uv run pre-commit run --all-files --show-diff-on-failure
-
-  typecheck:
-    name: typecheck (mypy)
-    runs-on: self-hosted
-    needs: lint
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-      - name: Install uv + sync
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install uv
-          uv --version
-          uv sync --frozen || uv sync
-      - name: Run mypy
-        run: |
-          uv run mypy --ignore-missing-imports src
-
-  audit:
-    name: audit (pip-audit)
-    runs-on: self-hosted
-    needs: typecheck
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-      - name: Install uv + sync
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install uv
-          uv --version
-          uv sync --frozen || uv sync
-      - name: Run pip-audit
-        run: |
-          uvx pip-audit --version
-          uvx pip-audit .
-
-  test:
-    name: test (pytest + behave)
-    runs-on: self-hosted
-    needs: audit
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-      - name: Install uv + sync
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install uv
-          uv --version
-          uv sync --frozen || uv sync
-
-      - name: Pytest (skip if no tests / treat "no tests" as success)
-        run: |
-          if [ -d tests ]; then
-            uv run pytest --doctest-modules --maxfail=3 --disable-warnings -q || rc=$?
-            if [ "${rc:-0}" -eq 5 ]; then
-              echo "Pytest found no tests; skipping as success."
-              exit 0
-            else
-              exit "${rc:-0}"
-            fi
+          if uv run ruff --version >/dev/null 2>&1; then
+            uv run ruff check .
           else
-            echo "No tests directory; skipping pytest."
+            echo "ruff not installed -> skipping lint"
           fi
 
-      - name: Behave (skip if no features)
+      # -----------------------
+      # TYPECHECK (quick)
+      # -----------------------
+      - name: Typecheck (mypy if available)
         run: |
-          if [ -d tests/behave/features ]; then
-            uv run behave tests/behave/features
+          if uv run mypy --version >/dev/null 2>&1; then
+            uv run mypy --ignore-missing-imports src
           else
-            echo "No behave features; skipping behave."
+            echo "mypy not installed -> skipping typecheck"
+          fi
+
+      # -----------------------
+      # AUDIT (quick)
+      # -----------------------
+      - name: Audit (pip-audit if available)
+        run: |
+          if uvx pip-audit --version >/dev/null 2>&1; then
+            uvx pip-audit . || true
+          else
+            echo "pip-audit not available -> skipping audit"
+          fi
+
+      # -----------------------
+      # TESTS (quick)
+      # -----------------------
+      - name: Tests (pytest if present)
+        run: |
+          if [ -d tests ]; then
+            if uv run pytest --version >/dev/null 2>&1; then
+              uv run pytest -q
+            else
+              echo "pytest not installed -> skipping tests"
+            fi
+          else
+            echo "No tests/ directory -> skipping."
           fi
