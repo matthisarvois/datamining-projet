@@ -374,6 +374,10 @@ Ce projet **Olist Recommendation System** vous donne une expérience complète d
 **🚀 Ready to build the future of e-commerce recommendations? Let's code!** ✨
 ---
 
+## Lien Trello 
+
+https://trello.com/b/YMaeeQZm/mon-tableau-trello
+
 *Dernière mise à jour : Décembre 2025*
 *Version : 1.0.0*
 *Auteur : Mohamed TRIBAK pour Master 2 SEP*
