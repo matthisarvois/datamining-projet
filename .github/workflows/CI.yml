@@ -6,6 +6,7 @@ on:
 
 env:
   UV_CACHE_DIR: .uv-cache
+  PRE_COMMIT_HOME: .cache/pre-commit
 
 jobs:
   lint:
@@ -29,9 +30,17 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Sync deps (uv)
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: .cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      - name: Sync deps (uv) (include dev groups)
         run: |
-          uv sync --frozen || uv sync
+          uv sync --frozen --all-groups || uv sync --all-groups
 
       - name: Run pre-commit
         run: |
@@ -58,9 +67,9 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Sync deps (uv)
+      - name: Sync deps (uv) (include dev groups)
         run: |
-          uv sync --frozen || uv sync
+          uv sync --frozen --all-groups || uv sync --all-groups
 
       - name: Run mypy
         run: |
@@ -87,9 +96,9 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Sync deps (uv)
+      - name: Sync deps (uv) (include dev groups)
         run: |
-          uv sync --frozen || uv sync
+          uv sync --frozen --all-groups || uv sync --all-groups
 
       - name: Run pip-audit
         run: |
@@ -116,9 +125,9 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Sync deps (uv)
+      - name: Sync deps (uv) (include dev groups)
         run: |
-          uv sync --frozen || uv sync
+          uv sync --frozen --all-groups || uv sync --all-groups
 
       - name: Pytest (skip if no tests / treat "no tests" as success)
         run: |
