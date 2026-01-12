@@ -15,10 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Python (self-hosted)
+      - name: Check Python + uv (self-hosted)
         run: |
           python3 --version
-          python --version || true
+          command -v uv
+          uv --version
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -28,11 +29,8 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Install uv + sync
+      - name: Sync deps (uv)
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install uv
-          uv --version
           uv sync --frozen || uv sync
 
       - name: Run pre-commit
@@ -47,9 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Python (self-hosted)
+      - name: Check Python + uv (self-hosted)
         run: |
           python3 --version
+          command -v uv
+          uv --version
 
       - uses: actions/cache@v4
         with:
@@ -58,11 +58,8 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Install uv + sync
+      - name: Sync deps (uv)
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install uv
-          uv --version
           uv sync --frozen || uv sync
 
       - name: Run mypy
@@ -77,9 +74,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Python (self-hosted)
+      - name: Check Python + uv (self-hosted)
         run: |
           python3 --version
+          command -v uv
+          uv --version
 
       - uses: actions/cache@v4
         with:
@@ -88,11 +87,8 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Install uv + sync
+      - name: Sync deps (uv)
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install uv
-          uv --version
           uv sync --frozen || uv sync
 
       - name: Run pip-audit
@@ -107,9 +103,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Python (self-hosted)
+      - name: Check Python + uv (self-hosted)
         run: |
           python3 --version
+          command -v uv
+          uv --version
 
       - uses: actions/cache@v4
         with:
@@ -118,11 +116,8 @@ jobs:
           restore-keys: |
             uv-cache-${{ runner.os }}-
 
-      - name: Install uv + sync
+      - name: Sync deps (uv)
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install uv
-          uv --version
           uv sync --frozen || uv sync
 
       - name: Pytest (skip if no tests / treat "no tests" as success)
