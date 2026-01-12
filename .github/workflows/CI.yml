@@ -42,9 +42,9 @@ jobs:
         run: |
           uv sync --frozen --all-groups || uv sync --all-groups
 
-      - name: Run pre-commit
+      - name: Run pre-commit (via uvx)
         run: |
-          uv run pre-commit run --all-files --show-diff-on-failure
+          uvx pre-commit run --all-files --show-diff-on-failure
 
   typecheck:
     name: typecheck (mypy)
