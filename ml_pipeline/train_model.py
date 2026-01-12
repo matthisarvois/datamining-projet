@@ -36,10 +36,10 @@ def check_data_availability(data_dir: Path) -> bool:
         True si toutes les données sont présentes
     """
     required_files = [
-        'olist_customers_dataset.csv',
-        'olist_orders_dataset.csv',
-        'olist_order_items_dataset.csv',
-        'olist_products_dataset.csv'
+        "olist_customers_dataset.csv",
+        "olist_orders_dataset.csv",
+        "olist_order_items_dataset.csv",
+        "olist_products_dataset.csv",
     ]
 
     missing_files = []
@@ -53,7 +53,6 @@ def check_data_availability(data_dir: Path) -> bool:
 
     print("Toutes les données requises sont présentes")
     return True
-
 
 
 def train_recommendation_model(data_dir: Path) -> dict:
@@ -94,7 +93,7 @@ def display_training_results(metrics: dict):
     print(f"Cross-validation: {metrics['cv_mean']:.3f} ± {metrics['cv_std']:.3f}")
 
     # Interprétation des résultats
-    auc = metrics['auc_score']
+    auc = metrics["auc_score"]
     if auc >= 0.9:
         performance = "Excellente"
     elif auc >= 0.8:
@@ -128,14 +127,12 @@ def display_training_results(metrics: dict):
 
 def main():
     """Fonction principale."""
-    parser = argparse.ArgumentParser(
-        description="Entraîne le modèle de recommandation Olist"
-    )
+    parser = argparse.ArgumentParser(description="Entraîne le modèle de recommandation Olist")
     parser.add_argument(
-        '--data-dir',
+        "--data-dir",
         type=str,
         default=str(RAW_DATA_DIR),
-        help=f'Répertoire des données (défaut: {RAW_DATA_DIR})'
+        help=f"Répertoire des données (défaut: {RAW_DATA_DIR})",
     )
 
     args = parser.parse_args()
@@ -171,8 +168,6 @@ def main():
     print("5. Optimiser les hyperparamètres")
 
     print("\n✨ Entraînement terminé avec succès! ✨")
-
-
 
 
 if __name__ == "__main__":

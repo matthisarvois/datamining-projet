@@ -15,16 +15,18 @@ Ce script va:
 """
 
 import urllib.request
-import pandas as pd
 from pathlib import Path
-from config import DataConfig, RAW_DATA_DIR
+
+import pandas as pd
+
+from config import RAW_DATA_DIR, DataConfig
 
 
 def download_olist_data():
     """Télécharge les données Olist depuis GitHub."""
     print("Téléchargement des données Olist...")
 
-    for name, filename in DataConfig.DATASETS.items():
+    for _name, filename in DataConfig.DATASETS.items():
         url = DataConfig.OLIST_BASE_URL + filename
         local_path = RAW_DATA_DIR / filename
 
@@ -44,6 +46,7 @@ def download_olist_data():
             print(f" Erreur téléchargement {filename}: {e}")
 
     print(" Données téléchargées avec succès!\n")
+
 
 def create_sample_env():
     """Crée un fichier .env d'exemple."""
@@ -68,7 +71,7 @@ LOG_LEVEL=INFO
 """
 
     env_path = Path(".env.example")
-    with open(env_path, "w", encoding='utf-8') as f:
+    with open(env_path, "w", encoding="utf-8") as f:
         f.write(env_content)
 
     print(f"   ✅ Fichier {env_path} créé")

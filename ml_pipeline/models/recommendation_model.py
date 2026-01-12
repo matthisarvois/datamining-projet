@@ -16,23 +16,27 @@ Classes:
     - RecommendationPipeline: Pipeline complet d'entraînement
 """
 
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import classification_report, roc_auc_score, precision_recall_curve
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from typing import List, Tuple, Dict, Optional
-import joblib
 import sys
 from pathlib import Path
 
-from ml_pipeline.preprocessing.feature_engineering import load_and_prepare_data, RecommendationFeatureEngine
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+from ml_pipeline.preprocessing.feature_engineering import (
+    RecommendationFeatureEngine,
+    load_and_prepare_data,
+)
 
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from config import MLConfig, MODELS_DIR
+from config import MLConfig
+
 
 class OlistRecommendationModel:
     """
@@ -45,7 +49,7 @@ class OlistRecommendationModel:
     - Les interactions passées
     """
 
-    def __init__(self, random_forest_params: Dict = None):
+    def __init__(self, random_forest_params: dict = None):
         """
         Initialise le modèle de recommandation.
 
@@ -55,19 +59,21 @@ class OlistRecommendationModel:
         self.rf_params = random_forest_params or MLConfig.RANDOM_FOREST_PARAMS
 
         # Pipeline de preprocessing + modèle
-        self.pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('classifier', RandomForestClassifier(**self.rf_params))
-        ])
+        self.pipeline = Pipeline(
+            [("scaler", StandardScaler()), ("classifier", RandomForestClassifier(**self.rf_params))]
+        )
 
         self.feature_columns = []
         self.is_trained = False
         self.feature_importance_ = None
         self.training_score_ = None
 
-    def prepare_training_data(self, customer_features: pd.DataFrame,
-                            product_features: pd.DataFrame,
-                            interactions: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+    def prepare_training_data(
+        self,
+        customer_features: pd.DataFrame,
+        product_features: pd.DataFrame,
+        interactions: pd.DataFrame,
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """
         Prépare les données d'entraînement en combinant les features.
 
@@ -83,38 +89,44 @@ class OlistRecommendationModel:
         print("Préparation des données d'entraînement...")
 
         # Créer des échantillons négatifs (produits non achetés)
-        positive_interactions = interactions[['customer_id', 'product_id', 'purchased']].copy()
+        positive_interactions = interactions[["customer_id", "product_id", "purchased"]].copy()
         negative_interactions = self._create_negative_samples(
             positive_interactions, customer_features.index, product_features.index
         )
 
         # Combiner interactions positives et négatives
-        all_interactions = pd.concat([positive_interactions, negative_interactions], ignore_index=True)
+        all_interactions = pd.concat(
+            [positive_interactions, negative_interactions], ignore_index=True
+        )
 
         # Joindre les features clients et produits
         training_data = all_interactions.merge(
-            customer_features, left_on='customer_id', right_index=True, how='left'
-        ).merge(
-            product_features, left_on='product_id', right_index=True, how='left'
-        )
+            customer_features, left_on="customer_id", right_index=True, how="left"
+        ).merge(product_features, left_on="product_id", right_index=True, how="left")
 
         # Supprimer les colonnes non numériques
         feature_cols = training_data.select_dtypes(include=[np.number]).columns.tolist()
-        feature_cols.remove('purchased')  # Retirer la variable cible
+        feature_cols.remove("purchased")  # Retirer la variable cible
 
         X = training_data[feature_cols].fillna(0)
-        y = training_data['purchased']
+        y = training_data["purchased"]
 
         self.feature_columns = feature_cols
 
-        print(f"   {len(X)} échantillons préparés ({y.sum()} positifs, {len(y) - y.sum()} négatifs)")
+        print(
+            f"   {len(X)} échantillons préparés ({y.sum()} positifs, {len(y) - y.sum()} négatifs)"
+        )
         print(f"   {len(feature_cols)} features utilisées")
 
         return X, y
 
-    def _create_negative_samples(self, positive_interactions: pd.DataFrame,
-                               customer_ids: List, product_ids: List,
-                               negative_ratio: float = 2.0) -> pd.DataFrame:
+    def _create_negative_samples(
+        self,
+        positive_interactions: pd.DataFrame,
+        customer_ids: list,
+        product_ids: list,
+        negative_ratio: float = 2.0,
+    ) -> pd.DataFrame:
         """
         Crée des échantillons négatifs (client-produit non achetés).
 
@@ -129,7 +141,11 @@ class OlistRecommendationModel:
         """
         # Ensemble des paires client-produit positives
         positive_pairs = set(
-            zip(positive_interactions['customer_id'], positive_interactions['product_id'])
+            zip(
+                positive_interactions["customer_id"],
+                positive_interactions["product_id"],
+                strict=False,
+            )
         )
 
         # Générer des paires aléatoires
@@ -140,17 +156,15 @@ class OlistRecommendationModel:
         customers_sample = np.random.choice(customer_ids, size=n_negative, replace=True)
         products_sample = np.random.choice(product_ids, size=n_negative, replace=True)
 
-        for customer_id, product_id in zip(customers_sample, products_sample):
+        for customer_id, product_id in zip(customers_sample, products_sample, strict=False):
             if (customer_id, product_id) not in positive_pairs:
-                negative_pairs.append({
-                    'customer_id': customer_id,
-                    'product_id': product_id,
-                    'purchased': 0
-                })
+                negative_pairs.append(
+                    {"customer_id": customer_id, "product_id": product_id, "purchased": 0}
+                )
 
         return pd.DataFrame(negative_pairs[:n_negative])
 
-    def fit(self, X: pd.DataFrame, y: pd.Series) -> 'OlistRecommendationModel':
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> "OlistRecommendationModel":
         """
         Entraîne le modèle de recommandation.
 
@@ -165,8 +179,7 @@ class OlistRecommendationModel:
 
         # Division train/test
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=MLConfig.TEST_SIZE, random_state=MLConfig.RANDOM_STATE,
-            stratify=y
+            X, y, test_size=MLConfig.TEST_SIZE, random_state=MLConfig.RANDOM_STATE, stratify=y
         )
 
         # Entraînement
@@ -182,24 +195,22 @@ class OlistRecommendationModel:
 
         # Cross-validation
         cv_scores = cross_val_score(
-            self.pipeline, X_train, y_train,
-            cv=MLConfig.CV_FOLDS, scoring='roc_auc'
+            self.pipeline, X_train, y_train, cv=MLConfig.CV_FOLDS, scoring="roc_auc"
         )
 
         self.training_score_ = {
-            'train_accuracy': train_score,
-            'test_accuracy': test_score,
-            'auc_score': auc_score,
-            'cv_mean': cv_scores.mean(),
-            'cv_std': cv_scores.std()
+            "train_accuracy": train_score,
+            "test_accuracy": test_score,
+            "auc_score": auc_score,
+            "cv_mean": cv_scores.mean(),
+            "cv_std": cv_scores.std(),
         }
 
         # Importance des features
-        rf_model = self.pipeline.named_steps['classifier']
-        self.feature_importance_ = pd.DataFrame({
-            'feature': self.feature_columns,
-            'importance': rf_model.feature_importances_
-        }).sort_values('importance', ascending=False)
+        rf_model = self.pipeline.named_steps["classifier"]
+        self.feature_importance_ = pd.DataFrame(
+            {"feature": self.feature_columns, "importance": rf_model.feature_importances_}
+        ).sort_values("importance", ascending=False)
 
         self.is_trained = True
 
@@ -208,7 +219,9 @@ class OlistRecommendationModel:
 
         return self
 
-    def predict_proba(self, customer_features: Dict, product_features: pd.DataFrame) -> pd.DataFrame:
+    def predict_proba(
+        self, customer_features: dict, product_features: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Prédit la probabilité d'achat pour un client et plusieurs produits.
 
@@ -240,15 +253,19 @@ class OlistRecommendationModel:
         probas = self.pipeline.predict_proba(X_pred)[:, 1]
 
         # Résultats
-        results = pd.DataFrame({
-            'product_id': product_features.index,
-            'purchase_probability': probas
-        }).sort_values('purchase_probability', ascending=False)
+        results = pd.DataFrame(
+            {"product_id": product_features.index, "purchase_probability": probas}
+        ).sort_values("purchase_probability", ascending=False)
 
         return results
 
-    def get_recommendations(self, customer_id: str, customer_features: Dict,
-                          product_features: pd.DataFrame, n_recommendations: int = 10) -> List[Dict]:
+    def get_recommendations(
+        self,
+        customer_id: str,
+        customer_features: dict,
+        product_features: pd.DataFrame,
+        n_recommendations: int = 10,
+    ) -> list[dict]:
         """
         Obtient les recommandations personnalisées pour un client.
 
@@ -270,18 +287,18 @@ class OlistRecommendationModel:
         # Enrichir avec les détails produits
         recommendations = []
         for _, row in top_recommendations.iterrows():
-            product_id = row['product_id']
-            probability = row['purchase_probability']
+            product_id = row["product_id"]
+            probability = row["purchase_probability"]
 
             # Récupérer les détails du produit
             product_info = product_features.loc[product_id].to_dict()
 
             recommendation = {
-                'customer_id': customer_id,
-                'product_id': product_id,
-                'purchase_probability': float(probability),
-                'confidence': self._calculate_confidence(probability),
-                'product_info': product_info
+                "customer_id": customer_id,
+                "product_id": product_id,
+                "purchase_probability": float(probability),
+                "confidence": self._calculate_confidence(probability),
+                "product_info": product_info,
             }
             recommendations.append(recommendation)
 
@@ -290,15 +307,15 @@ class OlistRecommendationModel:
     def _calculate_confidence(self, probability: float) -> str:
         """Calcule le niveau de confiance basé sur la probabilité."""
         if probability >= 0.8:
-            return 'High'
+            return "High"
         elif probability >= 0.6:
-            return 'Medium'
+            return "Medium"
         elif probability >= 0.4:
-            return 'Low'
+            return "Low"
         else:
-            return 'Very Low'
+            return "Very Low"
 
-    def get_model_performance(self) -> Dict:
+    def get_model_performance(self) -> dict:
         """Retourne les métriques de performance du modèle."""
         if not self.is_trained:
             return {"error": "Modèle non entraîné"}
@@ -312,7 +329,7 @@ class OlistRecommendationModel:
 
         return self.feature_importance_.head(top_n)
 
-    def save_model(self, filepath: Optional[Path] = None):
+    def save_model(self, filepath: Path | None = None):
         """Sauvegarde le modèle entraîné."""
         if not self.is_trained:
             raise ValueError("Impossible de sauvegarder un modèle non entraîné")
@@ -322,7 +339,7 @@ class OlistRecommendationModel:
         print(f"   Modèle sauvegardé: {filepath}")
 
     @classmethod
-    def load_model(cls, filepath: Optional[Path] = None) -> 'OlistRecommendationModel':
+    def load_model(cls, filepath: Path | None = None) -> "OlistRecommendationModel":
         """Charge un modèle pré-entraîné."""
         filepath = filepath or MLConfig.RECOMMENDATION_MODEL_FILE
 
@@ -333,6 +350,7 @@ class OlistRecommendationModel:
         print(f"   Modèle chargé: {filepath}")
         return model
 
+
 class RecommendationPipeline:
     """
     Pipeline complet d'entraînement du système de recommandation.
@@ -342,7 +360,7 @@ class RecommendationPipeline:
         self.model = OlistRecommendationModel()
         self.feature_engine = None
 
-    def train_pipeline(self, raw_data_dir: Path) -> Dict:
+    def train_pipeline(self, raw_data_dir: Path) -> dict:
         """
         Entraîne le pipeline complet.
 
@@ -353,9 +371,9 @@ class RecommendationPipeline:
             Métriques d'entraînement
         """
 
-        print("" + "="*50)
+        print("" + "=" * 50)
         print("ENTRAÎNEMENT PIPELINE DE RECOMMANDATION")
-        print("" + "="*50)
+        print("" + "=" * 50)
 
         # 1. Charger les données
         customers, orders, order_items, products, reviews = load_and_prepare_data(raw_data_dir)
@@ -370,11 +388,11 @@ class RecommendationPipeline:
         )
 
         # Features produits (simplifiées pour la démo)
-        product_features = products[['product_id']].set_index('product_id')
-        product_features['category_encoded'] = pd.Categorical(
-            products['product_category_name']
+        product_features = products[["product_id"]].set_index("product_id")
+        product_features["category_encoded"] = pd.Categorical(
+            products["product_category_name"]
         ).codes
-        product_features['weight'] = products.get('product_weight_g', 100)
+        product_features["weight"] = products.get("product_weight_g", 100)
 
         # Créer les interactions
         interactions = self.feature_engine.create_interaction_matrix(orders, order_items)

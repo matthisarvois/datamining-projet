@@ -18,22 +18,19 @@ Usage:
     pytest tests/unit/test_recommendation_model.py::TestOlistRecommendationModel::test_initialization -v
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from unittest.mock import Mock, patch, MagicMock
-import joblib
-import tempfile
-from pathlib import Path
 import sys
+from pathlib import Path
+from unittest.mock import Mock
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Import du module à tester
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from ml_pipeline.models.recommendation_model import (
-    OlistRecommendationModel,
-    RecommendationPipeline
-)
 from config import MLConfig
+from ml_pipeline.models.recommendation_model import OlistRecommendationModel, RecommendationPipeline
+
 
 @pytest.mark.unit
 class TestOlistRecommendationModel:
@@ -63,11 +60,7 @@ class TestOlistRecommendationModel:
         Test: L'initialisation du modèle avec paramètres personnalisés.
         """
         # ARRANGE
-        custom_params = {
-            'n_estimators': 50,
-            'max_depth': 5,
-            'random_state': 123
-        }
+        custom_params = {"n_estimators": 50, "max_depth": 5, "random_state": 123}
 
         # ACT
         model = OlistRecommendationModel(custom_params)
@@ -75,7 +68,7 @@ class TestOlistRecommendationModel:
         # ASSERT
         assert model.rf_params == custom_params
         # Vérifier que les paramètres sont passés au RandomForest
-        rf_classifier = model.pipeline.named_steps['classifier']
+        rf_classifier = model.pipeline.named_steps["classifier"]
         assert rf_classifier.n_estimators == 50
         assert rf_classifier.max_depth == 5
         assert rf_classifier.random_state == 123
@@ -88,14 +81,18 @@ class TestOlistRecommendationModel:
         model = OlistRecommendationModel()
 
         # Créer des interactions factices
-        interactions = pd.DataFrame({
-            'customer_id': ['test_customer_000', 'test_customer_001', 'test_customer_002'],
-            'product_id': ['test_product_000', 'test_product_001', 'test_product_002'],
-            'purchased': [1, 1, 1]
-        })
+        interactions = pd.DataFrame(
+            {
+                "customer_id": ["test_customer_000", "test_customer_001", "test_customer_002"],
+                "product_id": ["test_product_000", "test_product_001", "test_product_002"],
+                "purchased": [1, 1, 1],
+            }
+        )
 
         # ACT
-        X, y = model.prepare_training_data(sample_customer_features, sample_product_features, interactions)
+        X, y = model.prepare_training_data(
+            sample_customer_features, sample_product_features, interactions
+        )
 
         # ASSERT
         assert isinstance(X, pd.DataFrame)
@@ -119,11 +116,13 @@ class TestOlistRecommendationModel:
         # ARRANGE
         model = OlistRecommendationModel()
 
-        positive_interactions = pd.DataFrame({
-            'customer_id': ['test_customer_000', 'test_customer_001'],
-            'product_id': ['test_product_000', 'test_product_001'],
-            'purchased': [1, 1]
-        })
+        positive_interactions = pd.DataFrame(
+            {
+                "customer_id": ["test_customer_000", "test_customer_001"],
+                "product_id": ["test_product_000", "test_product_001"],
+                "purchased": [1, 1],
+            }
+        )
 
         customer_ids = sample_customer_features.index.tolist()
         product_ids = sample_product_features.index.tolist()
@@ -136,11 +135,19 @@ class TestOlistRecommendationModel:
         # ASSERT
         assert isinstance(negative_samples, pd.DataFrame)
         assert len(negative_samples) == len(positive_interactions) * 2  # Ratio de 2.0
-        assert all(negative_samples['purchased'] == 0)
+        assert all(negative_samples["purchased"] == 0)
 
         # Vérifier qu'aucun échantillon négatif ne correspond à une interaction positive
-        positive_pairs = set(zip(positive_interactions['customer_id'], positive_interactions['product_id']))
-        negative_pairs = set(zip(negative_samples['customer_id'], negative_samples['product_id']))
+        positive_pairs = set(
+            zip(
+                positive_interactions["customer_id"],
+                positive_interactions["product_id"],
+                strict=False,
+            )
+        )
+        negative_pairs = set(
+            zip(negative_samples["customer_id"], negative_samples["product_id"], strict=False)
+        )
         assert len(positive_pairs.intersection(negative_pairs)) == 0
 
     def test_predict_proba(self, mock_trained_model, sample_product_features):
@@ -149,10 +156,10 @@ class TestOlistRecommendationModel:
         """
         # ARRANGE
         customer_features = {
-            'total_orders': 5,
-            'total_spent': 250.0,
-            'avg_order_value': 50.0,
-            'days_since_last_order': 15
+            "total_orders": 5,
+            "total_spent": 250.0,
+            "avg_order_value": 50.0,
+            "days_since_last_order": 15,
         }
 
         # Limiter les produits pour la simplicité du test
@@ -163,31 +170,31 @@ class TestOlistRecommendationModel:
 
         # ASSERT
         assert isinstance(predictions, pd.DataFrame)
-        assert 'product_id' in predictions.columns
-        assert 'purchase_probability' in predictions.columns
+        assert "product_id" in predictions.columns
+        assert "purchase_probability" in predictions.columns
         assert len(predictions) == len(limited_products)
 
         # Vérifier que les probabilités sont valides
-        probabilities = predictions['purchase_probability']
+        probabilities = predictions["purchase_probability"]
         assert all(0 <= prob <= 1 for prob in probabilities)
 
         # Vérifier que les résultats sont triés par probabilité décroissante
-        assert predictions['purchase_probability'].is_monotonic_decreasing
+        assert predictions["purchase_probability"].is_monotonic_decreasing
 
     def test_calculate_confidence(self, mock_trained_model):
         """
         Test: Le calcul du niveau de confiance est correct.
         """
         # ARRANGE & ACT & ASSERT
-        assert mock_trained_model._calculate_confidence(0.9) == 'High'
-        assert mock_trained_model._calculate_confidence(0.75) == 'Medium'
-        assert mock_trained_model._calculate_confidence(0.5) == 'Low'
-        assert mock_trained_model._calculate_confidence(0.2) == 'Very Low'
+        assert mock_trained_model._calculate_confidence(0.9) == "High"
+        assert mock_trained_model._calculate_confidence(0.75) == "Medium"
+        assert mock_trained_model._calculate_confidence(0.5) == "Low"
+        assert mock_trained_model._calculate_confidence(0.2) == "Very Low"
 
         # Test des limites
-        assert mock_trained_model._calculate_confidence(0.8) == 'High'
-        assert mock_trained_model._calculate_confidence(0.6) == 'Medium'
-        assert mock_trained_model._calculate_confidence(0.4) == 'Low'
+        assert mock_trained_model._calculate_confidence(0.8) == "High"
+        assert mock_trained_model._calculate_confidence(0.6) == "Medium"
+        assert mock_trained_model._calculate_confidence(0.4) == "Low"
 
     def test_get_model_performance(self, mock_trained_model):
         """
@@ -198,10 +205,10 @@ class TestOlistRecommendationModel:
 
         # ASSERT
         assert isinstance(performance, dict)
-        expected_metrics = ['train_accuracy', 'test_accuracy', 'auc_score', 'cv_mean', 'cv_std']
+        expected_metrics = ["train_accuracy", "test_accuracy", "auc_score", "cv_mean", "cv_std"]
         for metric in expected_metrics:
             assert metric in performance
-            assert isinstance(performance[metric], (int, float))
+            assert isinstance(performance[metric], int | float)
 
     def test_get_feature_importance(self, mock_trained_model):
         """
@@ -213,11 +220,11 @@ class TestOlistRecommendationModel:
         # ASSERT
         assert isinstance(importance, pd.DataFrame)
         assert len(importance) == 3  # top_n = 3
-        assert 'feature' in importance.columns
-        assert 'importance' in importance.columns
+        assert "feature" in importance.columns
+        assert "importance" in importance.columns
 
         # Vérifier que c'est trié par importance décroissante
-        assert importance['importance'].is_monotonic_decreasing
+        assert importance["importance"].is_monotonic_decreasing
 
     def test_model_not_trained_errors(self):
         """
@@ -225,8 +232,8 @@ class TestOlistRecommendationModel:
         """
         # ARRANGE
         model = OlistRecommendationModel()
-        customer_features = {'total_orders': 1}
-        product_features = pd.DataFrame({'feature1': [1, 2]})
+        customer_features = {"total_orders": 1}
+        product_features = pd.DataFrame({"feature1": [1, 2]})
 
         # ACT & ASSERT
         with pytest.raises(ValueError, match="Le modèle n'est pas encore entraîné"):
@@ -234,6 +241,7 @@ class TestOlistRecommendationModel:
 
         with pytest.raises(ValueError, match="Impossible de sauvegarder un modèle non entraîné"):
             model.save_model()
+
 
 @pytest.mark.unit
 class TestRecommendationPipeline:
@@ -253,7 +261,9 @@ class TestRecommendationPipeline:
         assert isinstance(pipeline.model, OlistRecommendationModel)
         assert pipeline.feature_engine is None
 
+
 # Tests d'intégration légers (mais toujours unitaires)
+
 
 @pytest.mark.unit
 def test_edge_cases_and_error_handling():
@@ -269,11 +279,11 @@ def test_edge_cases_and_error_handling():
 
     # Test avec customer_features manquantes
     customer_features = {}
-    product_features = pd.DataFrame({'feature': [1]}, index=['prod1'])
+    product_features = pd.DataFrame({"feature": [1]}, index=["prod1"])
 
     # Doit gérer gracieusement les features manquantes
     model.is_trained = True
-    model.feature_columns = ['missing_feature']
+    model.feature_columns = ["missing_feature"]
     model.pipeline = Mock()
     model.pipeline.predict_proba.return_value = np.array([[0.3, 0.7]])
 

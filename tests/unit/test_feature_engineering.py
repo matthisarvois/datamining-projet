@@ -20,20 +20,22 @@ Usage:
     pytest tests/unit/test_feature_engineering.py::test_customer_feature_engineer_basic -v
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Import du module à tester
 sys.path.append(str(Path(__file__).parent.parent.parent))
 from ml_pipeline.preprocessing.feature_engineering import (
     CustomerFeatureEngineer,
     ProductFeatureEngineer,
-    RecommendationFeatureEngine
+    RecommendationFeatureEngine,
 )
+
 
 @pytest.mark.unit
 class TestCustomerFeatureEngineer:
@@ -53,8 +55,8 @@ class TestCustomerFeatureEngineer:
         # ASSERT
         assert engineer.reference_date is None
         assert engineer.category_encoder is not None
-        assert hasattr(engineer, 'fit')
-        assert hasattr(engineer, 'transform')
+        assert hasattr(engineer, "fit")
+        assert hasattr(engineer, "transform")
 
     def test_fit_basic(self, sample_customer_features):
         """
@@ -69,7 +71,7 @@ class TestCustomerFeatureEngineer:
         # ASSERT
         assert result == engineer  # fit doit retourner self
         assert engineer.reference_date is not None
-        assert hasattr(engineer.category_encoder, 'classes_')
+        assert hasattr(engineer.category_encoder, "classes_")
 
     def test_transform_single_customer(self):
         """
@@ -80,18 +82,16 @@ class TestCustomerFeatureEngineer:
         engineer.reference_date = datetime(2023, 12, 31)
 
         customer_data = {
-            'total_orders': 5,
-            'total_spent': 250.0,
-            'last_order_date': datetime(2023, 11, 15),
-            'favorite_category': 'cama_mesa_banho',
-            'avg_review_score': 4.2,
-            'unique_products_bought': 3
+            "total_orders": 5,
+            "total_spent": 250.0,
+            "last_order_date": datetime(2023, 11, 15),
+            "favorite_category": "cama_mesa_banho",
+            "avg_review_score": 4.2,
+            "unique_products_bought": 3,
         }
 
         # Fit avec des données factices pour l'encodeur
-        dummy_df = pd.DataFrame({
-            'favorite_category': ['cama_mesa_banho', 'beleza_saude']
-        })
+        dummy_df = pd.DataFrame({"favorite_category": ["cama_mesa_banho", "beleza_saude"]})
         engineer.fit(dummy_df)
 
         # ACT
@@ -99,20 +99,17 @@ class TestCustomerFeatureEngineer:
 
         # ASSERT
         assert isinstance(features, dict)
-        assert 'total_orders' in features
-        assert 'total_spent' in features
-        assert 'avg_order_value' in features
-        assert 'days_since_last_order' in features
+        assert "total_orders" in features
+        assert "total_spent" in features
+        assert "avg_order_value" in features
+        assert "days_since_last_order" in features
 
         # Vérifications des calculs
         expected_avg_order = 250.0 / 5
-        assert features['avg_order_value'] == expected_avg_order
+        assert features["avg_order_value"] == expected_avg_order
 
-        expected_days_since = (engineer.reference_date - customer_data['last_order_date']).days
-        assert features['days_since_last_order'] == expected_days_since
-
-
-
+        expected_days_since = (engineer.reference_date - customer_data["last_order_date"]).days
+        assert features["days_since_last_order"] == expected_days_since
 
 
 @pytest.mark.unit
@@ -146,10 +143,15 @@ class TestProductFeatureEngineer:
         # ASSERT
         assert isinstance(result, pd.DataFrame)
         assert len(result) == len(sample_products_data)
-        assert 'category_encoded' in result.columns
+        assert "category_encoded" in result.columns
 
         # Vérifier que les dimensions ont été normalisées
-        numeric_cols = ['product_weight_g', 'product_length_cm', 'product_height_cm', 'product_width_cm']
+        numeric_cols = [
+            "product_weight_g",
+            "product_length_cm",
+            "product_height_cm",
+            "product_width_cm",
+        ]
         available_cols = [col for col in numeric_cols if col in result.columns]
 
         if available_cols:
@@ -179,7 +181,6 @@ class TestRecommendationFeatureEngine:
         assert not engine.is_fitted
 
 
-
 # Tests d'aide et utiitaires
 @pytest.mark.unit
 def test_feature_validation_helpers():
@@ -189,13 +190,14 @@ def test_feature_validation_helpers():
     from tests.conftest import assert_dataframe_equals
 
     # ARRANGE
-    df1 = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-    df2 = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-    df3 = pd.DataFrame({'a': [1, 2, 4], 'b': [4, 5, 6]})
+    df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    df2 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    df3 = pd.DataFrame({"a": [1, 2, 4], "b": [4, 5, 6]})
 
     # ACT & ASSERT
     assert assert_dataframe_equals(df1, df2) is True
     assert assert_dataframe_equals(df1, df3) is False
+
 
 # Tests de régression
 @pytest.mark.unit
