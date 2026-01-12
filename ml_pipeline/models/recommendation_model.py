@@ -18,6 +18,7 @@ Classes:
 
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import joblib
 import numpy as np
@@ -49,24 +50,24 @@ class OlistRecommendationModel:
     - Les interactions passées
     """
 
-    def __init__(self, random_forest_params: dict = None):
+    def __init__(self, random_forest_params: dict[str, Any] | None = None) -> None:
         """
         Initialise le modèle de recommandation.
 
         Args:
             random_forest_params: Paramètres pour RandomForest
         """
-        self.rf_params = random_forest_params or MLConfig.RANDOM_FOREST_PARAMS
+        self.rf_params: dict[str, Any] = random_forest_params or MLConfig.RANDOM_FOREST_PARAMS
 
         # Pipeline de preprocessing + modèle
-        self.pipeline = Pipeline(
+        self.pipeline: Pipeline = Pipeline(
             [("scaler", StandardScaler()), ("classifier", RandomForestClassifier(**self.rf_params))]
         )
 
-        self.feature_columns = []
-        self.is_trained = False
-        self.feature_importance_ = None
-        self.training_score_ = None
+        self.feature_columns: list[str] = []
+        self.is_trained: bool = False
+        self.feature_importance_: pd.DataFrame | None = None
+        self.training_score_: dict[str, float] | None = None
 
     def prepare_training_data(
         self,
@@ -111,7 +112,7 @@ class OlistRecommendationModel:
         X = training_data[feature_cols].fillna(0)
         y = training_data["purchased"]
 
-        self.feature_columns = feature_cols
+        self.feature_columns = cast(list[str], feature_cols)
 
         print(
             f"   {len(X)} échantillons préparés ({y.sum()} positifs, {len(y) - y.sum()} négatifs)"
@@ -123,8 +124,8 @@ class OlistRecommendationModel:
     def _create_negative_samples(
         self,
         positive_interactions: pd.DataFrame,
-        customer_ids: list,
-        product_ids: list,
+        customer_ids: pd.Index,
+        product_ids: pd.Index,
         negative_ratio: float = 2.0,
     ) -> pd.DataFrame:
         """
@@ -150,7 +151,7 @@ class OlistRecommendationModel:
 
         # Générer des paires aléatoires
         n_negative = int(len(positive_interactions) * negative_ratio)
-        negative_pairs = []
+        negative_pairs: list[dict[str, Any]] = []
 
         # Échantillonnage stratifié pour assurer la diversité
         customers_sample = np.random.choice(customer_ids, size=n_negative, replace=True)
@@ -179,7 +180,11 @@ class OlistRecommendationModel:
 
         # Division train/test
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=MLConfig.TEST_SIZE, random_state=MLConfig.RANDOM_STATE, stratify=y
+            X,
+            y,
+            test_size=MLConfig.TEST_SIZE,
+            random_state=MLConfig.RANDOM_STATE,
+            stratify=y,
         )
 
         # Entraînement
@@ -199,15 +204,15 @@ class OlistRecommendationModel:
         )
 
         self.training_score_ = {
-            "train_accuracy": train_score,
-            "test_accuracy": test_score,
-            "auc_score": auc_score,
-            "cv_mean": cv_scores.mean(),
-            "cv_std": cv_scores.std(),
+            "train_accuracy": float(train_score),
+            "test_accuracy": float(test_score),
+            "auc_score": float(auc_score),
+            "cv_mean": float(cv_scores.mean()),
+            "cv_std": float(cv_scores.std()),
         }
 
         # Importance des features
-        rf_model = self.pipeline.named_steps["classifier"]
+        rf_model = cast(RandomForestClassifier, self.pipeline.named_steps["classifier"])
         self.feature_importance_ = pd.DataFrame(
             {"feature": self.feature_columns, "importance": rf_model.feature_importances_}
         ).sort_values("importance", ascending=False)
@@ -220,7 +225,7 @@ class OlistRecommendationModel:
         return self
 
     def predict_proba(
-        self, customer_features: dict, product_features: pd.DataFrame
+        self, customer_features: dict[str, Any], product_features: pd.DataFrame
     ) -> pd.DataFrame:
         """
         Prédit la probabilité d'achat pour un client et plusieurs produits.
@@ -262,10 +267,10 @@ class OlistRecommendationModel:
     def get_recommendations(
         self,
         customer_id: str,
-        customer_features: dict,
+        customer_features: dict[str, Any],
         product_features: pd.DataFrame,
         n_recommendations: int = 10,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         Obtient les recommandations personnalisées pour un client.
 
@@ -285,7 +290,7 @@ class OlistRecommendationModel:
         top_recommendations = predictions.head(n_recommendations)
 
         # Enrichir avec les détails produits
-        recommendations = []
+        recommendations: list[dict[str, Any]] = []
         for _, row in top_recommendations.iterrows():
             product_id = row["product_id"]
             probability = row["purchase_probability"]
@@ -297,7 +302,7 @@ class OlistRecommendationModel:
                 "customer_id": customer_id,
                 "product_id": product_id,
                 "purchase_probability": float(probability),
-                "confidence": self._calculate_confidence(probability),
+                "confidence": self._calculate_confidence(float(probability)),
                 "product_info": product_info,
             }
             recommendations.append(recommendation)
@@ -315,9 +320,9 @@ class OlistRecommendationModel:
         else:
             return "Very Low"
 
-    def get_model_performance(self) -> dict:
+    def get_model_performance(self) -> dict[str, Any]:
         """Retourne les métriques de performance du modèle."""
-        if not self.is_trained:
+        if not self.is_trained or self.training_score_ is None:
             return {"error": "Modèle non entraîné"}
 
         return self.training_score_
@@ -329,7 +334,7 @@ class OlistRecommendationModel:
 
         return self.feature_importance_.head(top_n)
 
-    def save_model(self, filepath: Path | None = None):
+    def save_model(self, filepath: Path | None = None) -> None:
         """Sauvegarde le modèle entraîné."""
         if not self.is_trained:
             raise ValueError("Impossible de sauvegarder un modèle non entraîné")
@@ -348,7 +353,7 @@ class OlistRecommendationModel:
 
         model = joblib.load(filepath)
         print(f"   Modèle chargé: {filepath}")
-        return model
+        return cast(OlistRecommendationModel, model)
 
 
 class RecommendationPipeline:
@@ -356,11 +361,11 @@ class RecommendationPipeline:
     Pipeline complet d'entraînement du système de recommandation.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = OlistRecommendationModel()
-        self.feature_engine = None
+        self.feature_engine: RecommendationFeatureEngine | None = None
 
-    def train_pipeline(self, raw_data_dir: Path) -> dict:
+    def train_pipeline(self, raw_data_dir: Path) -> dict[str, Any]:
         """
         Entraîne le pipeline complet.
 

@@ -14,6 +14,7 @@ import logging
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -46,13 +47,13 @@ class RecommendationService:
     - Les métriques de performance
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model: OlistRecommendationModel | None = None
         self.customer_features: pd.DataFrame | None = None
         self.product_features: pd.DataFrame | None = None
         self.feature_engineer: CustomerFeatureEngineer | None = None
         self.model_loaded_at: datetime | None = None
-        self._cache: dict = {}
+        self._cache: dict[str, tuple[RecommendationResponse, datetime]] = {}
         self._cache_ttl = timedelta(hours=1)
 
     async def initialize(self) -> bool:
@@ -82,20 +83,20 @@ class RecommendationService:
             logger.error(f"Erreur lors de l'initialisation: {e}")
             return False
 
-    async def _load_model(self):
+    async def _load_model(self) -> None:
         """Charge le modèle pré-entraîné."""
-
         self.model = OlistRecommendationModel.load_model()
         self.feature_engineer = CustomerFeatureEngineer()
         logger.info("Modèle chargé avec succès")
 
-    async def _load_customer_features(self):
+    async def _load_customer_features(self) -> None:
         """Charge les features clients pré-calculées."""
         customer_features_path = MLConfig.CUSTOMER_FEATURES_FILE
         self.customer_features = pd.read_csv(customer_features_path, index_col=0)
+        self.customer_features.index = self.customer_features.index.astype(str)
         logger.info(f"Features clients chargées: {len(self.customer_features)} clients")
 
-    async def _load_product_features(self):
+    async def _load_product_features(self) -> None:
         """Charge les features produits réelles."""
         product_features_path = MLConfig.PRODUCT_FEATURES_FILE
 
@@ -118,7 +119,7 @@ class RecommendationService:
                 "product_weight_g",
                 "volume_cm3",
             ]
-        ].set_index(df["product_id"])
+        ].set_index(df["product_id"].astype(str))
 
         logger.info(f"Features produits chargées: {len(self.product_features)} produits")
 
@@ -155,7 +156,6 @@ class RecommendationService:
         customer_features = await self._get_customer_features(customer_id)
 
         # Générer les recommandations
-
         recommendations = await self._generate_ml_recommendations(
             customer_id, customer_features, n_recommendations
         )
@@ -173,12 +173,10 @@ class RecommendationService:
         logger.info(f"{len(recommendations)} recommandations générées pour {customer_id}")
         return response
 
-    async def _get_customer_features(self, customer_id: str) -> dict:
+    async def _get_customer_features(self, customer_id: str) -> dict[str, Any]:
         """Récupère les features d'un client."""
-        if customer_id in self.customer_features.index:
-            return self.customer_features.loc[customer_id].to_dict()
-        else:
-            logger.warning(f"⚠️ Client {customer_id} non trouvé, utilisation de features par défaut")
+        if self.customer_features is None:
+            logger.warning("⚠️ Features clients non chargées, utilisation de features par défaut")
             return {
                 "total_orders": None,
                 "total_spent": None,
@@ -188,26 +186,48 @@ class RecommendationService:
                 "unique_products_bought": None,
             }
 
+        customer_id = str(customer_id)
+        if customer_id in self.customer_features.index:
+            return self.customer_features.loc[customer_id].to_dict()
+
+        logger.warning(f"⚠️ Client {customer_id} non trouvé, utilisation de features par défaut")
+        return {
+            "total_orders": None,
+            "total_spent": None,
+            "avg_order_value": None,
+            "days_since_last_order": None,
+            "avg_review_score": None,
+            "unique_products_bought": None,
+        }
+
     async def _generate_ml_recommendations(
-        self, customer_id: str, customer_features: dict, n_recommendations: int
+        self, customer_id: str, customer_features: dict[str, Any], n_recommendations: int
     ) -> list[Recommendation]:
         """Génère des recommandations avec le modèle ML."""
+        model = self.model
+        if model is None:
+            raise RuntimeError("Modèle non chargé")
+
+        product_features = self.product_features
+        if product_features is None:
+            raise RuntimeError("Features produits non chargées")
+
         # Utiliser le modèle pour obtenir les prédictions
-        predictions = self.model.predict_proba(customer_features, self.product_features)
+        predictions = model.predict_proba(customer_features, product_features)
 
         # Limiter au nombre demandé
         top_predictions = predictions.head(n_recommendations)
 
         # Convertir en objets Recommendation
-        recommendations = []
+        recommendations: list[Recommendation] = []
         for rank, (_, row) in enumerate(top_predictions.iterrows(), 1):
             product_id = row["product_id"]
-            probability = row["purchase_probability"]
+            probability = float(row["purchase_probability"])
 
             recommendation = Recommendation(
                 customer_id=customer_id,
                 product_id=product_id,
-                purchase_probability=float(probability),
+                purchase_probability=probability,
                 confidence=self._calculate_confidence(probability),
                 rank=rank,
             )
@@ -233,7 +253,7 @@ class RecommendationService:
         Returns:
             Informations détaillées sur le modèle
         """
-        if not self.model or not self.model.is_trained:
+        if self.model is None or not self.model.is_trained:
             # Modèle non chargé, retourner des infos par défaut
             metrics = ModelMetrics(
                 train_accuracy=0.0, test_accuracy=0.0, auc_score=0.0, cv_mean=0.0, cv_std=0.0
@@ -254,7 +274,7 @@ class RecommendationService:
         )
 
         # Importance des features
-        feature_importance = []
+        feature_importance: list[FeatureImportance] = []
         if hasattr(self.model, "get_feature_importance"):
             importance_df = self.model.get_feature_importance()
             for _, row in importance_df.iterrows():
@@ -269,7 +289,7 @@ class RecommendationService:
     async def get_customer_list(self) -> list[str]:
         """Retourne la liste des clients disponibles."""
         if self.customer_features is not None:
-            return self.customer_features.index.tolist()
+            return [str(x) for x in self.customer_features.index.tolist()]
         else:
             return [f"customer_{i:03d}" for i in range(10)]
 
