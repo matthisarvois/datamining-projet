@@ -4,17 +4,25 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UV_CACHE_DIR: .uv-cache
   PRE_COMMIT_HOME: .cache/pre-commit
+  MYPY_CACHE_DIR: .cache/mypy
 
 jobs:
-  lint:
-    name: lint (pre-commit)
+  ci:
+    name: CI (lint + typecheck + audit + tests)
     runs-on: self-hosted
-    continue-on-error: true
+    timeout-minutes: 45
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Check Python + uv (self-hosted)
         run: |
@@ -38,98 +46,43 @@ jobs:
           restore-keys: |
             pre-commit-${{ runner.os }}-
 
+      - name: Cache mypy
+        uses: actions/cache@v4
+        with:
+          path: .cache/mypy
+          key: mypy-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            mypy-cache-${{ runner.os }}-
+
       - name: Sync deps (uv) (include dev groups)
         run: |
           uv sync --frozen --all-groups || uv sync --all-groups
 
-      - name: Run pre-commit (via uvx)
+      - name: Lint (pre-commit)
+        continue-on-error: true
         run: |
           uvx pre-commit run --all-files --show-diff-on-failure
 
-  typecheck:
-    name: typecheck (mypy)
-    runs-on: self-hosted
-    needs: lint
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check Python + uv (self-hosted)
+      - name: Typecheck (mypy)
+        continue-on-error: true
         run: |
-          python3 --version
-          command -v uv
-          uv --version
+          if [ -d src ]; then
+            echo "Running mypy on src/"
+            uv run mypy --ignore-missing-imports src
+          elif [ -d app ]; then
+            echo "Running mypy on app/"
+            uv run mypy --ignore-missing-imports app
+          else
+            echo "No 'src/' or 'app/' directory found; skipping mypy. (Adjust the workflow to point mypy to your code directory.)"
+          fi
 
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-
-      - name: Sync deps (uv) (include dev groups)
-        run: |
-          uv sync --frozen --all-groups || uv sync --all-groups
-
-      - name: Run mypy
-        run: |
-          uv run mypy --ignore-missing-imports src
-
-  audit:
-    name: audit (pip-audit)
-    runs-on: self-hosted
-    needs: typecheck
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check Python + uv (self-hosted)
-        run: |
-          python3 --version
-          command -v uv
-          uv --version
-
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-
-      - name: Sync deps (uv) (include dev groups)
-        run: |
-          uv sync --frozen --all-groups || uv sync --all-groups
-
-      - name: Run pip-audit
+      - name: Security audit (pip-audit)
+        continue-on-error: true
         run: |
           uvx pip-audit --version
           uvx pip-audit .
 
-  test:
-    name: test (pytest + behave)
-    runs-on: self-hosted
-    needs: audit
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check Python + uv (self-hosted)
-        run: |
-          python3 --version
-          command -v uv
-          uv --version
-
-      - uses: actions/cache@v4
-        with:
-          path: .uv-cache
-          key: uv-cache-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
-          restore-keys: |
-            uv-cache-${{ runner.os }}-
-
-      - name: Sync deps (uv) (include dev groups)
-        run: |
-          uv sync --frozen --all-groups || uv sync --all-groups
-
-      - name: Pytest (skip if no tests / treat "no tests" as success)
+      - name: Tests (pytest)
         run: |
           if [ -d tests ]; then
             uv run pytest --doctest-modules --maxfail=3 --disable-warnings -q || rc=$?
@@ -143,7 +96,7 @@ jobs:
             echo "No tests directory; skipping pytest."
           fi
 
-      - name: Behave (skip if no features)
+      - name: Tests (behave)
         run: |
           if [ -d tests/behave/features ]; then
             uv run behave tests/behave/features
