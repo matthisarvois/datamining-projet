@@ -19,6 +19,7 @@ Architecture:
 - Cache pour optimiser les performances
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -38,8 +39,8 @@ st.set_page_config(
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Configuration de l'API
-API_BASE_URL = "http://localhost:8000/api/v1"
+# Configuration de l'API (env pour Docker : API_BASE_URL=http://backend:8000/api/v1)
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000/api/v1")
 
 
 # Cache Streamlit pour optimiser les performances

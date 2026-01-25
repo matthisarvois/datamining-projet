@@ -123,10 +123,35 @@ uv run streamlit run frontend/app.py
 uv run pytest tests/ -m "not slow" -v
 ```
 
+### Avec Docker (`.devcontainer` – UV, pre-commit, pytest inclus)
+
+Tous les prérequis sont dans l'image (Python 3.12, UV, pre-commit, ruff, pytest, librairies du projet).  
+Le build exécute `setup.py` (données Olist) et `train_model.py` (entraînement).
+
+```bash
+# Depuis la racine du projet – build + démarrage backend (8000) et frontend (8501)
+docker compose -f .devcontainer/compose.yaml up --build
+
+# En arrière-plan
+docker compose -f .devcontainer/compose.yaml up --build -d
+```
+
+| Service    | Port | URL                                                |
+|------------|------|----------------------------------------------------|
+| **Backend**  | 8000 | http://localhost:8000, /docs, /api/v1/health       |
+| **Frontend** | 8501 | http://localhost:8501                              |
+
+```bash
+# Tests dans le conteneur
+docker compose -f .devcontainer/compose.yaml run --rm backend uv run pytest tests/ -v
+
+# Pre-commit (formatage, lint)
+docker compose -f .devcontainer/compose.yaml run --rm backend uv run pre-commit run --all-files
+```
 
 ### Vérification du Système
 
-1. **Santé de l'API** : http://localhost:8000/health
+1. **Santé de l'API** : http://localhost:8000/health (ou http://localhost:8000/api/v1/health)
 2. **Documentation** : http://localhost:8000/docs
 3. **Interface utilisateur** : http://localhost:8501
 
@@ -233,6 +258,7 @@ olist_recommendation_system/
 ├── 📁 scripts/               # Scripts utilitaires
 │   └── generate_demo_data.py # Génération données démo
 ├── 📁 tests/                 # Tests automatisés
+├── 📁 .devcontainer/         # Docker : Dockerfile + compose (backend 8000, frontend 8501)
 ├── config.py                 # Configuration globale
 ├── requirements.txt          # Dépendances Python
 ├── setup.py                  # Script de setup
@@ -271,8 +297,8 @@ olist_recommendation_system/
    - Essayer LightGBM
    - Comparer les performances
 
-5**Déploiement**
-   - Conteneuriser avec Docker
+5. **Déploiement**
+   - Conteneuriser avec Docker : voir *Avec Docker* (`.devcontainer`) dans *Lancement de l'Application*
 
 --
 
