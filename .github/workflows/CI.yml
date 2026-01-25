@@ -159,7 +159,8 @@ jobs:
       - name: Run pip-audit
         run: |
           uvx pip-audit --version
-          uvx pip-audit .
+          # CVE-2026-0994 (protobuf) : pas de fix dispo, ignore temporaire. Retirer --ignore-vuln quand protobuf corrige.
+          uvx pip-audit . --ignore-vuln CVE-2026-0994
 
   test:
     name: test (pytest + behave)
