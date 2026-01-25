@@ -13,16 +13,17 @@ Ce module définit tous les endpoints REST pour:
 - Santé de l'API
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List
-import time
 import logging
+import time
 from datetime import datetime
 
+from fastapi import APIRouter, HTTPException, Query
+
 from ..schemas.recommendation import (
-    CustomerRequest, RecommendationResponse, ModelInfoResponse,
-    HealthResponse, BatchRecommendationRequest,
-    BatchRecommendationResponse
+    CustomerRequest,
+    HealthResponse,
+    ModelInfoResponse,
+    RecommendationResponse,
 )
 from ..services.recommendation_service import recommendation_service
 
@@ -31,6 +32,7 @@ router = APIRouter()
 
 # Variable pour tracking du uptime
 start_time = time.time()
+
 
 @router.get("/health", response_model=HealthResponse, summary="🏥 Vérification de santé")
 async def health_check():
@@ -48,10 +50,15 @@ async def health_check():
     return HealthResponse(
         status="healthy" if is_healthy else "degraded",
         model_loaded=recommendation_service.model is not None,
-        uptime_seconds=uptime
+        uptime_seconds=uptime,
     )
 
-@router.post("/recommendations", response_model=RecommendationResponse, summary="🎯 Recommandations personnalisées")
+
+@router.post(
+    "/recommendations",
+    response_model=RecommendationResponse,
+    summary="🎯 Recommandations personnalisées",
+)
 async def get_recommendations(request: CustomerRequest):
     """
     Génère des recommandations personnalisées pour un client.
@@ -76,8 +83,7 @@ async def get_recommendations(request: CustomerRequest):
         logger.info(f"🎯 Génération de recommandations pour {request.customer_id}")
 
         response = await recommendation_service.get_recommendations(
-            customer_id=request.customer_id,
-            n_recommendations=request.n_recommendations
+            customer_id=request.customer_id, n_recommendations=request.n_recommendations
         )
 
         logger.info(f"✅ {len(response.recommendations)} recommandations générées")
@@ -86,11 +92,13 @@ async def get_recommendations(request: CustomerRequest):
     except Exception as e:
         logger.error(f"❌ Erreur lors de la génération de recommandations: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de la génération de recommandations: {str(e)}"
-        )
+            status_code=500, detail=f"Erreur lors de la génération de recommandations: {str(e)}"
+        ) from e
 
-@router.get("/model/info", response_model=ModelInfoResponse, summary="🤖 Informations sur le modèle")
+
+@router.get(
+    "/model/info", response_model=ModelInfoResponse, summary="🤖 Informations sur le modèle"
+)
 async def get_model_info():
     """
     Retourne les informations détaillées sur le modèle ML.
@@ -114,13 +122,15 @@ async def get_model_info():
     except Exception as e:
         logger.error(f"❌ Erreur lors de la récupération des infos du modèle: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de la récupération des informations: {str(e)}"
-        )
+            status_code=500, detail=f"Erreur lors de la récupération des informations: {str(e)}"
+        ) from e
 
-@router.get("/customers", response_model=List[str], summary="👥 Liste des clients")
+
+@router.get("/customers", response_model=list[str], summary="👥 Liste des clients")
 async def get_customers(
-    limit: int = Query(default=1000, ge=1, le=1000, description="Nombre maximum de clients à retourner")
+    limit: int = Query(
+        default=1000, ge=1, le=1000, description="Nombre maximum de clients à retourner"
+    ),
 ):
     """
     Retourne la liste des clients disponibles pour les recommandations.
@@ -141,14 +151,20 @@ async def get_customers(
     except Exception as e:
         logger.error(f"❌ Erreur lors de la récupération des clients: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de la récupération des clients: {str(e)}"
-        )
+            status_code=500, detail=f"Erreur lors de la récupération des clients: {str(e)}"
+        ) from e
 
-@router.get("/recommendations/{customer_id}", response_model=RecommendationResponse, summary="🎯 Recommandations par URL")
+
+@router.get(
+    "/recommendations/{customer_id}",
+    response_model=RecommendationResponse,
+    summary="🎯 Recommandations par URL",
+)
 async def get_recommendations_by_path(
     customer_id: str,
-    n_recommendations: int = Query(default=10, ge=1, le=50, description="Nombre de recommandations")
+    n_recommendations: int = Query(
+        default=10, ge=1, le=50, description="Nombre de recommandations"
+    ),
 ):
     """
     Génère des recommandations via paramètres d'URL (alternative GET).
@@ -170,24 +186,21 @@ async def get_recommendations_by_path(
     try:
         logger.info(f"🎯 Recommandations GET pour {customer_id}")
 
-        request = CustomerRequest(
-            customer_id=customer_id,
-            n_recommendations=n_recommendations
-        )
+        request = CustomerRequest(customer_id=customer_id, n_recommendations=n_recommendations)
 
         return await recommendation_service.get_recommendations(
-            customer_id=request.customer_id,
-            n_recommendations=request.n_recommendations
+            customer_id=request.customer_id, n_recommendations=request.n_recommendations
         )
 
     except Exception as e:
         logger.error(f"❌ Erreur GET recommandations: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Erreur lors de la génération de recommandations: {str(e)}"
-        )
+            status_code=500, detail=f"Erreur lors de la génération de recommandations: {str(e)}"
+        ) from e
+
 
 # Routes de debugging et monitoring
+
 
 @router.get("/debug/cache/stats", summary="🔍 Statistiques du cache")
 async def get_cache_stats():
@@ -201,10 +214,11 @@ async def get_cache_stats():
         return {
             "cache_entries": cache_size,
             "cache_ttl_hours": recommendation_service._cache_ttl.total_seconds() / 3600,
-            "service_uptime_seconds": time.time() - start_time
+            "service_uptime_seconds": time.time() - start_time,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
 
 @router.post("/debug/cache/clear", summary="🧹 Vider le cache")
 async def clear_cache():
@@ -218,7 +232,8 @@ async def clear_cache():
         logger.info("🧹 Cache vidé")
         return {"message": "Cache vidé avec succès", "timestamp": datetime.now()}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
 
 # Route d'exemple pour les étudiants
 @router.get("/example", summary="📚 Exemple d'utilisation")
@@ -235,36 +250,26 @@ async def get_usage_example():
                 "name": "Recommandations simples",
                 "method": "POST",
                 "url": "/recommendations",
-                "body": {
-                    "customer_id": "customer_001",
-                    "n_recommendations": 5
-                }
+                "body": {"customer_id": "customer_001", "n_recommendations": 5},
             },
             {
                 "name": "Recommandations par URL",
                 "method": "GET",
-                "url": "/recommendations/customer_001?n_recommendations=5"
+                "url": "/recommendations/customer_001?n_recommendations=5",
             },
             {
                 "name": "Traitement en lot",
                 "method": "POST",
                 "url": "/recommendations/batch",
-                "body": {
-                    "customer_ids": ["customer_001", "customer_002"],
-                    "n_recommendations": 10
-                }
+                "body": {"customer_ids": ["customer_001", "customer_002"], "n_recommendations": 10},
             },
-            {
-                "name": "Info modèle",
-                "method": "GET",
-                "url": "/model/info"
-            }
+            {"name": "Info modèle", "method": "GET", "url": "/model/info"},
         ],
         "tips": [
             "💡 Utilisez /health pour vérifier si l'API fonctionne",
             "💡 Consultez /customers pour voir la liste des clients",
             "💡 L'API met en cache les recommandations pendant 1h",
             "💡 Utilisez les routes /debug/ pour le développement",
-            "💡 Les probabilités près de 1.0 indiquent une forte confiance"
-        ]
+            "💡 Les probabilités près de 1.0 indiquent une forte confiance",
+        ],
     }

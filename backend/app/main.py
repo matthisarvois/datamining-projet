@@ -23,18 +23,18 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-import uvicorn
 
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from config import APIConfig
 from backend.app.routers.recommendations import router as recommendations_router
 from backend.app.services.recommendation_service import recommendation_service
+from config import APIConfig
 
 # Configuration du logging
 logging.basicConfig(
@@ -43,11 +43,12 @@ logging.basicConfig(
     style="{",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("logs/olist_api.log", mode="a", encoding="utf-8")
-    ]
+        logging.FileHandler("logs/olist_api.log", mode="a", encoding="utf-8"),
+    ],
 )
 
 logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -80,6 +81,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("🔽 Arrêt de l'application")
 
+
 # Créer l'application FastAPI
 app = FastAPI(
     title=APIConfig.TITLE,
@@ -88,7 +90,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 # Middleware CORS pour permettre les requêtes cross-origin (nécessaire pour Streamlit)
@@ -101,10 +103,8 @@ app.add_middleware(
 )
 
 # Middleware de sécurité pour les hosts autorisés
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"]
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"])
+
 
 # Gestionnaire d'exceptions global
 @app.exception_handler(Exception)
@@ -120,9 +120,10 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal Server Error",
             "message": "Une erreur inattendue s'est produite",
             "details": str(exc) if app.debug else None,
-            "timestamp": str(Path(__file__).parent.parent.parent)
-        }
+            "timestamp": str(Path(__file__).parent.parent.parent),
+        },
     )
+
 
 # Route racine avec informations de base
 @app.get("/", summary="🏠 Page d'accueil de l'API")
@@ -143,30 +144,28 @@ async def root():
         "documentation": {
             "swagger_ui": "/docs",
             "redoc": "/redoc",
-            "openapi_schema": "/openapi.json"
+            "openapi_schema": "/openapi.json",
         },
         "quick_start": {
             "health_check": "/health",
             "get_customers": "/customers",
             "get_recommendations": "POST /recommendations",
             "model_info": "/model/info",
-            "examples": "/example"
+            "examples": "/example",
         },
         "tips": [
             "💡 Commencez par /health pour vérifier que l'API fonctionne",
             "💡 Consultez /customers pour voir les clients disponibles",
             "💡 Testez avec /recommendations pour obtenir des recommandations",
             "💡 Utilisez /docs pour une documentation interactive",
-            "💡 Explorez /model/info pour comprendre le modèle ML"
-        ]
+            "💡 Explorez /model/info pour comprendre le modèle ML",
+        ],
     }
 
+
 # Inclure les routers
-app.include_router(
-    recommendations_router,
-    prefix="/api/v1",
-    tags=["Recommandations"]
-)
+app.include_router(recommendations_router, prefix="/api/v1", tags=["Recommandations"])
+
 
 # Routes utiles pour les étudiants
 @app.get("/api/v1/info", summary="ℹ️ Informations sur l'API")
@@ -182,26 +181,27 @@ async def get_api_info():
             "version": APIConfig.VERSION,
             "framework": "FastAPI",
             "python_version": sys.version.split()[0],
-            "documentation": "OpenAPI 3.0"
+            "documentation": "OpenAPI 3.0",
         },
         "ml_stack": {
             "model": "RandomForest (scikit-learn)",
             "features": "RFM Analysis + Product Features",
-            "approach": "Hybrid Recommendation (Collaborative + Content-based)"
+            "approach": "Hybrid Recommendation (Collaborative + Content-based)",
         },
         "architecture": {
             "pattern": "Service Layer Architecture",
             "database": "CSV Files (demo) / PostgreSQL (production)",
             "caching": "In-memory with TTL",
-            "logging": "Structured logging"
+            "logging": "Structured logging",
         },
         "endpoints": {
             "total": len(app.routes),
             "recommendation_endpoints": 4,
             "utility_endpoints": 3,
-            "debug_endpoints": 2
-        }
+            "debug_endpoints": 2,
+        },
     }
+
 
 # Route pour les métriques (monitoring)
 @app.get("/metrics", summary="📊 Métriques de monitoring")
@@ -211,9 +211,10 @@ async def get_metrics():
 
     Format compatible avec Prometheus/Grafana.
     """
-    import time
-    import psutil
     import os
+    import time
+
+    import psutil
 
     try:
         process = psutil.Process(os.getpid())
@@ -223,7 +224,7 @@ async def get_metrics():
             "system": {
                 "cpu_percent": psutil.cpu_percent(),
                 "memory_percent": psutil.virtual_memory().percent,
-                "disk_percent": psutil.disk_usage('/').percent
+                "disk_percent": psutil.disk_usage("/").percent,
             },
             "process": {
                 "memory_rss_mb": memory_info.rss / 1024 / 1024,
@@ -233,12 +234,13 @@ async def get_metrics():
             "application": {
                 "model_loaded": recommendation_service.model is not None,
                 "cache_entries": len(recommendation_service._cache),
-                "service_healthy": recommendation_service.is_healthy()
+                "service_healthy": recommendation_service.is_healthy(),
             },
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
     except Exception as e:
         return {"error": f"Could not collect metrics: {e}"}
+
 
 def main():
     """
@@ -259,6 +261,7 @@ def main():
         log_level="info",
         reload_dirs=["backend"],  # Surveiller seulement le dossier backend
     )
+
 
 if __name__ == "__main__":
     main()

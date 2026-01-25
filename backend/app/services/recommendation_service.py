@@ -10,13 +10,13 @@ Ce module fait l'interface entre l'API REST et le modèle de machine learning,
 gérant le chargement du modèle, la cache, et les prédictions.
 """
 
-import pandas as pd
-import numpy as np
-from typing import List, Dict, Optional
+import logging
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
-import logging
+from typing import Any
+
+import pandas as pd
 
 from ml_pipeline.models.recommendation_model import OlistRecommendationModel
 from ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer
@@ -24,11 +24,14 @@ from ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEnginee
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from config import MLConfig
 from backend.app.schemas.recommendation import (
-    Recommendation, RecommendationResponse, ModelMetrics,
-    FeatureImportance, ModelInfoResponse
+    FeatureImportance,
+    ModelInfoResponse,
+    ModelMetrics,
+    Recommendation,
+    RecommendationResponse,
 )
+from config import MLConfig
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +47,13 @@ class RecommendationService:
     - Les métriques de performance
     """
 
-    def __init__(self):
-        self.model: Optional[OlistRecommendationModel] = None
-        self.customer_features: Optional[pd.DataFrame] = None
-        self.product_features: Optional[pd.DataFrame] = None
-        self.feature_engineer: Optional[CustomerFeatureEngineer] = None
-        self.model_loaded_at: Optional[datetime] = None
-        self._cache: Dict = {}
+    def __init__(self) -> None:
+        self.model: OlistRecommendationModel | None = None
+        self.customer_features: pd.DataFrame | None = None
+        self.product_features: pd.DataFrame | None = None
+        self.feature_engineer: CustomerFeatureEngineer | None = None
+        self.model_loaded_at: datetime | None = None
+        self._cache: dict[str, tuple[RecommendationResponse, datetime]] = {}
         self._cache_ttl = timedelta(hours=1)
 
     async def initialize(self) -> bool:
@@ -80,46 +83,43 @@ class RecommendationService:
             logger.error(f"Erreur lors de l'initialisation: {e}")
             return False
 
-    async def _load_model(self):
+    async def _load_model(self) -> None:
         """Charge le modèle pré-entraîné."""
-
         self.model = OlistRecommendationModel.load_model()
         self.feature_engineer = CustomerFeatureEngineer()
         logger.info("Modèle chargé avec succès")
 
-
-    async def _load_customer_features(self):
+    async def _load_customer_features(self) -> None:
         """Charge les features clients pré-calculées."""
         customer_features_path = MLConfig.CUSTOMER_FEATURES_FILE
         self.customer_features = pd.read_csv(customer_features_path, index_col=0)
+        self.customer_features.index = self.customer_features.index.astype(str)
         logger.info(f"Features clients chargées: {len(self.customer_features)} clients")
 
-    async def _load_product_features(self):
+    async def _load_product_features(self) -> None:
         """Charge les features produits réelles."""
         product_features_path = MLConfig.PRODUCT_FEATURES_FILE
 
         df = pd.read_csv(product_features_path)
 
         # Encodage simple de la catégorie
-        df['category_encoded'] = df['product_category_name'].astype('category').cat.codes
+        df["category_encoded"] = df["product_category_name"].astype("category").cat.codes
 
         # Création d'une feature volume
-        df['volume_cm3'] = (
-                df['product_length_cm'] *
-                df['product_height_cm'] *
-                df['product_width_cm']
+        df["volume_cm3"] = (
+            df["product_length_cm"] * df["product_height_cm"] * df["product_width_cm"]
         )
 
         self.product_features = df[
             [
-                'category_encoded',
-                'product_name_lenght',
-                'product_description_lenght',
-                'product_photos_qty',
-                'product_weight_g',
-                'volume_cm3'
+                "category_encoded",
+                "product_name_lenght",
+                "product_description_lenght",
+                "product_photos_qty",
+                "product_weight_g",
+                "volume_cm3",
             ]
-        ].set_index(df['product_id'])
+        ].set_index(df["product_id"].astype(str))
 
         logger.info(f"Features produits chargées: {len(self.product_features)} produits")
 
@@ -131,7 +131,9 @@ class RecommendationService:
         """Vérifie si le cache est encore valide."""
         return datetime.now() - cached_at < self._cache_ttl
 
-    async def get_recommendations(self, customer_id: str, n_recommendations: int = 10) -> RecommendationResponse:
+    async def get_recommendations(
+        self, customer_id: str, n_recommendations: int = 10
+    ) -> RecommendationResponse:
         """
         Génère des recommandations personnalisées pour un client.
 
@@ -154,7 +156,6 @@ class RecommendationService:
         customer_features = await self._get_customer_features(customer_id)
 
         # Générer les recommandations
-
         recommendations = await self._generate_ml_recommendations(
             customer_id, customer_features, n_recommendations
         )
@@ -163,7 +164,7 @@ class RecommendationService:
         response = RecommendationResponse(
             customer_id=customer_id,
             recommendations=recommendations,
-            total_recommendations=len(recommendations)
+            total_recommendations=len(recommendations),
         )
 
         # Mettre en cache
@@ -172,42 +173,63 @@ class RecommendationService:
         logger.info(f"{len(recommendations)} recommandations générées pour {customer_id}")
         return response
 
-    async def _get_customer_features(self, customer_id: str) -> Dict:
+    async def _get_customer_features(self, customer_id: str) -> dict[str, Any]:
         """Récupère les features d'un client."""
-        if customer_id in self.customer_features.index:
-            return self.customer_features.loc[customer_id].to_dict()
-        else:
-            logger.warning(f"⚠️ Client {customer_id} non trouvé, utilisation de features par défaut")
+        if self.customer_features is None:
+            logger.warning("⚠️ Features clients non chargées, utilisation de features par défaut")
             return {
-                'total_orders': None,
-                'total_spent': None,
-                'avg_order_value': None,
-                'days_since_last_order': None,
-                'avg_review_score': None,
-                'unique_products_bought': None
+                "total_orders": None,
+                "total_spent": None,
+                "avg_order_value": None,
+                "days_since_last_order": None,
+                "avg_review_score": None,
+                "unique_products_bought": None,
             }
 
-    async def _generate_ml_recommendations(self, customer_id: str, customer_features: Dict, n_recommendations: int) -> \
-    List[Recommendation]:
+        customer_id = str(customer_id)
+        if customer_id in self.customer_features.index:
+            return self.customer_features.loc[customer_id].to_dict()
+
+        logger.warning(f"⚠️ Client {customer_id} non trouvé, utilisation de features par défaut")
+        return {
+            "total_orders": None,
+            "total_spent": None,
+            "avg_order_value": None,
+            "days_since_last_order": None,
+            "avg_review_score": None,
+            "unique_products_bought": None,
+        }
+
+    async def _generate_ml_recommendations(
+        self, customer_id: str, customer_features: dict[str, Any], n_recommendations: int
+    ) -> list[Recommendation]:
         """Génère des recommandations avec le modèle ML."""
+        model = self.model
+        if model is None:
+            raise RuntimeError("Modèle non chargé")
+
+        product_features = self.product_features
+        if product_features is None:
+            raise RuntimeError("Features produits non chargées")
+
         # Utiliser le modèle pour obtenir les prédictions
-        predictions = self.model.predict_proba(customer_features, self.product_features)
+        predictions = model.predict_proba(customer_features, product_features)
 
         # Limiter au nombre demandé
         top_predictions = predictions.head(n_recommendations)
 
         # Convertir en objets Recommendation
-        recommendations = []
+        recommendations: list[Recommendation] = []
         for rank, (_, row) in enumerate(top_predictions.iterrows(), 1):
-            product_id = row['product_id']
-            probability = row['purchase_probability']
+            product_id = row["product_id"]
+            probability = float(row["purchase_probability"])
 
             recommendation = Recommendation(
                 customer_id=customer_id,
                 product_id=product_id,
-                purchase_probability=float(probability),
+                purchase_probability=probability,
                 confidence=self._calculate_confidence(probability),
-                rank=rank
+                rank=rank,
             )
             recommendations.append(recommendation)
 
@@ -216,13 +238,13 @@ class RecommendationService:
     def _calculate_confidence(self, probability: float) -> str:
         """Calcule le niveau de confiance basé sur la probabilité."""
         if probability >= 0.8:
-            return 'High'
+            return "High"
         elif probability >= 0.6:
-            return 'Medium'
+            return "Medium"
         elif probability >= 0.4:
-            return 'Low'
+            return "Low"
         else:
-            return 'Very Low'
+            return "Very Low"
 
     async def get_model_info(self) -> ModelInfoResponse:
         """
@@ -231,61 +253,52 @@ class RecommendationService:
         Returns:
             Informations détaillées sur le modèle
         """
-        if not self.model or not self.model.is_trained:
+        if self.model is None or not self.model.is_trained:
             # Modèle non chargé, retourner des infos par défaut
             metrics = ModelMetrics(
-                train_accuracy=0.0,
-                test_accuracy=0.0,
-                auc_score=0.0,
-                cv_mean=0.0,
-                cv_std=0.0
+                train_accuracy=0.0, test_accuracy=0.0, auc_score=0.0, cv_mean=0.0, cv_std=0.0
             )
             return ModelInfoResponse(
-                metrics=metrics,
-                feature_importance=[],
-                model_status="not_loaded"
+                metrics=metrics, feature_importance=[], model_status="not_loaded"
             )
 
         # Métriques du modèle
         perf = self.model.get_model_performance()
         metrics = ModelMetrics(
-            train_accuracy=perf['train_accuracy'],
-            test_accuracy=perf['test_accuracy'],
-            auc_score=perf['auc_score'],
-            cv_mean=perf['cv_mean'],
-            cv_std=perf['cv_std'],
-            last_trained=self.model_loaded_at
+            train_accuracy=perf["train_accuracy"],
+            test_accuracy=perf["test_accuracy"],
+            auc_score=perf["auc_score"],
+            cv_mean=perf["cv_mean"],
+            cv_std=perf["cv_std"],
+            last_trained=self.model_loaded_at,
         )
 
         # Importance des features
-        feature_importance = []
-        if hasattr(self.model, 'get_feature_importance'):
+        feature_importance: list[FeatureImportance] = []
+        if hasattr(self.model, "get_feature_importance"):
             importance_df = self.model.get_feature_importance()
             for _, row in importance_df.iterrows():
-                feature_importance.append(FeatureImportance(
-                    feature=row['feature'],
-                    importance=row['importance']
-                ))
+                feature_importance.append(
+                    FeatureImportance(feature=row["feature"], importance=row["importance"])
+                )
 
         return ModelInfoResponse(
-            metrics=metrics,
-            feature_importance=feature_importance,
-            model_status="ready"
+            metrics=metrics, feature_importance=feature_importance, model_status="ready"
         )
 
-    async def get_customer_list(self) -> List[str]:
+    async def get_customer_list(self) -> list[str]:
         """Retourne la liste des clients disponibles."""
         if self.customer_features is not None:
-            return self.customer_features.index.tolist()
+            return [str(x) for x in self.customer_features.index.tolist()]
         else:
             return [f"customer_{i:03d}" for i in range(10)]
 
     def is_healthy(self) -> bool:
         """Vérifie si le service est en bonne santé."""
         return (
-                self.model is not None and
-                self.customer_features is not None and
-                self.product_features is not None
+            self.model is not None
+            and self.customer_features is not None
+            and self.product_features is not None
         )
 
 

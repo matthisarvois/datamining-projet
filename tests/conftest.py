@@ -19,22 +19,22 @@ Usage:
     pytest tests/e2e/         # Tests end-to-end uniquement
 """
 
-import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from pathlib import Path
+import shutil
 import sys
 import tempfile
-import shutil
+from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import MagicMock
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Ajouter le répertoire racine au PYTHONPATH pour les imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from config import MLConfig, DataConfig
 from ml_pipeline.models.recommendation_model import OlistRecommendationModel
-from ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer, ProductFeatureEngineer
+
 
 @pytest.fixture(scope="session")
 def test_data_dir():
@@ -54,6 +54,7 @@ def test_data_dir():
     # Cleanup après tous les tests
     shutil.rmtree(temp_dir)
 
+
 @pytest.fixture
 def sample_customers_data():
     """
@@ -65,14 +66,15 @@ def sample_customers_data():
     np.random.seed(42)  # Pour la reproductibilité des tests
 
     data = {
-        'customer_id': [f'test_customer_{i:03d}' for i in range(10)],
-        'customer_unique_id': [f'unique_{i:03d}' for i in range(10)],
-        'customer_zip_code_prefix': np.random.randint(10000, 99999, 10),
-        'customer_city': ['São Paulo', 'Rio de Janeiro', 'Belo Horizonte'] * 3 + ['Curitiba'],
-        'customer_state': ['SP', 'RJ', 'MG'] * 3 + ['PR']
+        "customer_id": [f"test_customer_{i:03d}" for i in range(10)],
+        "customer_unique_id": [f"unique_{i:03d}" for i in range(10)],
+        "customer_zip_code_prefix": np.random.randint(10000, 99999, 10),
+        "customer_city": ["São Paulo", "Rio de Janeiro", "Belo Horizonte"] * 3 + ["Curitiba"],
+        "customer_state": ["SP", "RJ", "MG"] * 3 + ["PR"],
     }
 
     return pd.DataFrame(data)
+
 
 @pytest.fixture
 def sample_orders_data():
@@ -84,15 +86,24 @@ def sample_orders_data():
     base_date = datetime(2023, 1, 1)
 
     data = {
-        'order_id': [f'test_order_{i:03d}' for i in range(15)],
-        'customer_id': [f'test_customer_{i%10:03d}' for i in range(15)],  # Répartir sur 10 clients
-        'order_status': np.random.choice(['delivered', 'shipped', 'processing'], 15, p=[0.8, 0.15, 0.05]),
-        'order_purchase_timestamp': [base_date + timedelta(days=np.random.randint(0, 365)) for _ in range(15)],
-        'order_approved_at': [base_date + timedelta(days=np.random.randint(0, 365), hours=24) for _ in range(15)],
-        'order_delivered_customer_date': [base_date + timedelta(days=np.random.randint(7, 30)) for _ in range(15)]
+        "order_id": [f"test_order_{i:03d}" for i in range(15)],
+        "customer_id": [f"test_customer_{i%10:03d}" for i in range(15)],  # Répartir sur 10 clients
+        "order_status": np.random.choice(
+            ["delivered", "shipped", "processing"], 15, p=[0.8, 0.15, 0.05]
+        ),
+        "order_purchase_timestamp": [
+            base_date + timedelta(days=np.random.randint(0, 365)) for _ in range(15)
+        ],
+        "order_approved_at": [
+            base_date + timedelta(days=np.random.randint(0, 365), hours=24) for _ in range(15)
+        ],
+        "order_delivered_customer_date": [
+            base_date + timedelta(days=np.random.randint(7, 30)) for _ in range(15)
+        ],
     }
 
     return pd.DataFrame(data)
+
 
 @pytest.fixture
 def sample_products_data():
@@ -101,18 +112,25 @@ def sample_products_data():
     """
     np.random.seed(42)
 
-    categories = ['cama_mesa_banho', 'beleza_saude', 'esporte_lazer', 'informatica_acessorios', 'moveis_decoracao']
+    categories = [
+        "cama_mesa_banho",
+        "beleza_saude",
+        "esporte_lazer",
+        "informatica_acessorios",
+        "moveis_decoracao",
+    ]
 
     data = {
-        'product_id': [f'test_product_{i:03d}' for i in range(8)],
-        'product_category_name': np.random.choice(categories, 8),
-        'product_weight_g': np.random.randint(100, 5000, 8),
-        'product_length_cm': np.random.randint(10, 50, 8),
-        'product_height_cm': np.random.randint(5, 30, 8),
-        'product_width_cm': np.random.randint(10, 40, 8)
+        "product_id": [f"test_product_{i:03d}" for i in range(8)],
+        "product_category_name": np.random.choice(categories, 8),
+        "product_weight_g": np.random.randint(100, 5000, 8),
+        "product_length_cm": np.random.randint(10, 50, 8),
+        "product_height_cm": np.random.randint(5, 30, 8),
+        "product_width_cm": np.random.randint(10, 40, 8),
     }
 
     return pd.DataFrame(data)
+
 
 @pytest.fixture
 def sample_order_items_data():
@@ -122,15 +140,16 @@ def sample_order_items_data():
     np.random.seed(42)
 
     data = {
-        'order_id': [f'test_order_{i%15:03d}' for i in range(20)],  # Répartir sur 15 commandes
-        'order_item_id': list(range(1, 21)),
-        'product_id': [f'test_product_{i%8:03d}' for i in range(20)],  # Répartir sur 8 produits
-        'seller_id': [f'seller_{i%5:03d}' for i in range(20)],
-        'price': np.random.uniform(20, 500, 20),
-        'freight_value': np.random.uniform(5, 50, 20)
+        "order_id": [f"test_order_{i%15:03d}" for i in range(20)],  # Répartir sur 15 commandes
+        "order_item_id": list(range(1, 21)),
+        "product_id": [f"test_product_{i%8:03d}" for i in range(20)],  # Répartir sur 8 produits
+        "seller_id": [f"seller_{i%5:03d}" for i in range(20)],
+        "price": np.random.uniform(20, 500, 20),
+        "freight_value": np.random.uniform(5, 50, 20),
     }
 
     return pd.DataFrame(data)
+
 
 @pytest.fixture
 def sample_reviews_data():
@@ -140,14 +159,15 @@ def sample_reviews_data():
     np.random.seed(42)
 
     data = {
-        'review_id': [f'review_{i:03d}' for i in range(12)],
-        'order_id': [f'test_order_{i:03d}' for i in range(12)],
-        'review_score': np.random.choice([1, 2, 3, 4, 5], 12, p=[0.05, 0.05, 0.1, 0.3, 0.5]),
-        'review_comment_title': ['Bon produit', 'Très satisfait', 'Moyen'] * 4,
-        'review_creation_date': [datetime(2023, 1, 1) + timedelta(days=i*10) for i in range(12)]
+        "review_id": [f"review_{i:03d}" for i in range(12)],
+        "order_id": [f"test_order_{i:03d}" for i in range(12)],
+        "review_score": np.random.choice([1, 2, 3, 4, 5], 12, p=[0.05, 0.05, 0.1, 0.3, 0.5]),
+        "review_comment_title": ["Bon produit", "Très satisfait", "Moyen"] * 4,
+        "review_creation_date": [datetime(2023, 1, 1) + timedelta(days=i * 10) for i in range(12)],
     }
 
     return pd.DataFrame(data)
+
 
 @pytest.fixture
 def sample_customer_features():
@@ -156,21 +176,24 @@ def sample_customer_features():
     """
     np.random.seed(42)
 
-    customer_ids = [f'test_customer_{i:03d}' for i in range(10)]
+    customer_ids = [f"test_customer_{i:03d}" for i in range(10)]
 
     data = {
-        'total_orders': np.random.poisson(3, 10) + 1,
-        'total_spent': np.random.exponential(200, 10) + 50,
-        'days_since_last_order': np.random.exponential(30, 10) + 1,
-        'avg_review_score': np.random.normal(4.0, 0.8, 10).clip(1, 5),
-        'unique_products_bought': np.random.poisson(2, 10) + 1,
-        'favorite_category': np.random.choice(['cama_mesa_banho', 'beleza_saude', 'esporte_lazer'], 10)
+        "total_orders": np.random.poisson(3, 10) + 1,
+        "total_spent": np.random.exponential(200, 10) + 50,
+        "days_since_last_order": np.random.exponential(30, 10) + 1,
+        "avg_review_score": np.random.normal(4.0, 0.8, 10).clip(1, 5),
+        "unique_products_bought": np.random.poisson(2, 10) + 1,
+        "favorite_category": np.random.choice(
+            ["cama_mesa_banho", "beleza_saude", "esporte_lazer"], 10
+        ),
     }
 
     df = pd.DataFrame(data, index=customer_ids)
-    df['avg_order_value'] = df['total_spent'] / df['total_orders']
+    df["avg_order_value"] = df["total_spent"] / df["total_orders"]
 
     return df
+
 
 @pytest.fixture
 def sample_product_features():
@@ -179,15 +202,16 @@ def sample_product_features():
     """
     np.random.seed(42)
 
-    product_ids = [f'test_product_{i:03d}' for i in range(8)]
+    product_ids = [f"test_product_{i:03d}" for i in range(8)]
 
     data = {
-        'category_encoded': np.random.randint(0, 5, 8),
-        'weight': np.random.exponential(500, 8) + 100,
-        'popularity_score': np.random.beta(2, 5, 8)
+        "category_encoded": np.random.randint(0, 5, 8),
+        "weight": np.random.exponential(500, 8) + 100,
+        "popularity_score": np.random.beta(2, 5, 8),
     }
 
     return pd.DataFrame(data, index=product_ids)
+
 
 @pytest.fixture
 def mock_trained_model():
@@ -197,7 +221,12 @@ def mock_trained_model():
     """
     model = OlistRecommendationModel()
     model.is_trained = True
-    model.feature_columns = ['total_orders', 'total_spent', 'avg_order_value', 'days_since_last_order']
+    model.feature_columns = [
+        "total_orders",
+        "total_spent",
+        "avg_order_value",
+        "days_since_last_order",
+    ]
 
     # Mock du pipeline sklearn
     model.pipeline = MagicMock()
@@ -205,20 +234,23 @@ def mock_trained_model():
 
     # Mock des métriques de performance
     model.training_score_ = {
-        'train_accuracy': 0.85,
-        'test_accuracy': 0.78,
-        'auc_score': 0.82,
-        'cv_mean': 0.80,
-        'cv_std': 0.03
+        "train_accuracy": 0.85,
+        "test_accuracy": 0.78,
+        "auc_score": 0.82,
+        "cv_mean": 0.80,
+        "cv_std": 0.03,
     }
 
     # Mock de l'importance des features
-    model.feature_importance_ = pd.DataFrame({
-        'feature': ['total_spent', 'total_orders', 'days_since_last_order', 'avg_order_value'],
-        'importance': [0.4, 0.3, 0.2, 0.1]
-    })
+    model.feature_importance_ = pd.DataFrame(
+        {
+            "feature": ["total_spent", "total_orders", "days_since_last_order", "avg_order_value"],
+            "importance": [0.4, 0.3, 0.2, 0.1],
+        }
+    )
 
     return model
+
 
 @pytest.fixture
 def api_client():
@@ -227,9 +259,11 @@ def api_client():
     Permet de tester les endpoints API sans démarrer un serveur.
     """
     from fastapi.testclient import TestClient
+
     from backend.app.main import app
 
     return TestClient(app)
+
 
 @pytest.fixture(autouse=True)
 def setup_test_environment(monkeypatch, test_data_dir):
@@ -249,23 +283,22 @@ def setup_test_environment(monkeypatch, test_data_dir):
     monkeypatch.setenv("TESTING", "true")
     monkeypatch.setenv("LOG_LEVEL", "WARNING")  # Réduire le bruit dans les logs de test
 
+
 # Markers personnalisés pour organiser les tests
 pytest_plugins = []
 
+
 def pytest_configure(config):
     """Configuration personnalisée de pytest."""
-    config.addinivalue_line(
-        "markers", "unit: Tests unitaires - testent des composants individuels"
-    )
+    config.addinivalue_line("markers", "unit: Tests unitaires - testent des composants individuels")
     config.addinivalue_line(
         "markers", "integration: Tests d'intégration - testent l'interaction entre composants"
     )
-    config.addinivalue_line(
-        "markers", "e2e: Tests end-to-end - testent des workflows complets"
-    )
+    config.addinivalue_line("markers", "e2e: Tests end-to-end - testent des workflows complets")
     config.addinivalue_line(
         "markers", "slow: Tests lents - peuvent être exclus pour les tests rapides"
     )
+
 
 # Helper functions pour les tests
 def assert_dataframe_equals(df1, df2, check_dtype=True):
@@ -279,6 +312,7 @@ def assert_dataframe_equals(df1, df2, check_dtype=True):
     except AssertionError:
         return False
 
+
 def assert_recommendations_valid(recommendations):
     """
     Helper function pour valider la structure des recommandations.
@@ -288,10 +322,23 @@ def assert_recommendations_valid(recommendations):
     for i, rec in enumerate(recommendations):
         assert isinstance(rec, dict), f"Recommandation {i} doit être un dictionnaire"
 
-        required_fields = ['customer_id', 'product_id', 'purchase_probability', 'confidence', 'rank']
+        required_fields = [
+            "customer_id",
+            "product_id",
+            "purchase_probability",
+            "confidence",
+            "rank",
+        ]
         for field in required_fields:
             assert field in rec, f"Champ '{field}' manquant dans la recommandation {i}"
 
-        assert 0 <= rec['purchase_probability'] <= 1, f"Probabilité invalide: {rec['purchase_probability']}"
-        assert rec['confidence'] in ['High', 'Medium', 'Low', 'Very Low'], f"Confiance invalide: {rec['confidence']}"
-        assert rec['rank'] > 0, f"Rang invalide: {rec['rank']}"
+        assert (
+            0 <= rec["purchase_probability"] <= 1
+        ), f"Probabilité invalide: {rec['purchase_probability']}"
+        assert rec["confidence"] in [
+            "High",
+            "Medium",
+            "Low",
+            "Very Low",
+        ], f"Confiance invalide: {rec['confidence']}"
+        assert rec["rank"] > 0, f"Rang invalide: {rec['rank']}"
