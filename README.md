@@ -1,9 +1,33 @@
 # 🛒 Olist Recommendation System
-# Bienvenue à tous
 
-**Système de Recommandation E-commerce - Master 2 SEP**
+**Système de Recommandation E-commerce — Master 2 SEP**  
+*Mohamed TRIBAK*
 
-Mohamed TRIBAK
+---
+
+## 🚀 Démarrage rapide
+
+```bash
+# Installation
+pip install uv
+uv sync
+uv run python scripts/setup.py
+uv run python scripts/train.py
+
+# Lancer l'app (2 terminaux)
+uv run uvicorn backend.app.main:app --reload    # Terminal 1 → http://localhost:8000
+uv run streamlit run frontend/app.py            # Terminal 2 → http://localhost:8501
+
+# Tests
+uv run pytest tests/ -v
+```
+
+| Lien | URL |
+|------|-----|
+| **API** | http://localhost:8000 |
+| **Docs** | http://localhost:8000/docs |
+| **Health** | http://localhost:8000/api/v1/health |
+| **Frontend** | http://localhost:8501 |
 
 ---
 
@@ -59,101 +83,81 @@ graph TB
 
 ### Prérequis
 
-- **Python 3.8+**
-- **UV** (gestionnaire de packages nouvelle génération) **[RECOMMANDÉ]**
-- Ou **pip** (méthode traditionnelle)
+- **Python 3.12+**
+- **UV** (gestionnaire de paquets) — `pip install uv` ou [astral.sh/uv](https://astral.sh/uv)
 - **Git** (optionnel)
 
-### ⚡ Installation Rapide avec UV (Recommandé)
-
-**UV est 10-100x plus rapide que pip !** Parfait pour les data scientists pressés.
+### Installation (UV uniquement)
 
 ```bash
 # 1. Cloner le projet
 git clone <url-du-repo>
-cd olist_recommendation_system
+cd <nom-du-projet>
 
-# Installation d'UV
-pip install uv 
+# 2. Installer UV (si besoin)
+pip install uv
 
-# Setup complet
-uv sync 
+# 3. Dépendances (UV uniquement)
+uv sync
 
-# Génération données + entraînement
-uv run python setup.py
-uv run python ml_pipeline/train_model.py
-```
-
-### Installation Alternative avec pip
-
-```bash
-# Méthode traditionnelle (plus lente mais compatible)
-pip install -r requirements.txt
-python setup.py
-python ml_pipeline/train_model.py
+# 4. Données + entraînement du modèle
+uv run python scripts/setup.py
+uv run python scripts/train.py
 ```
 
 ## Lancement de l'Application
 
-### Avec UV (Recommandé - Plus Rapide)
+### En local (UV)
 
-#### 1. Démarrer le Backend (Terminal 1)
+| Étape | Commande | URL |
+|-------|----------|-----|
+| **1. Backend** (terminal 1) | `uv run uvicorn backend.app.main:app --reload` | http://localhost:8000, /docs |
+| **2. Frontend** (terminal 2) | `uv run streamlit run frontend/app.py` | http://localhost:8501 |
+| **3. Tests** | `uv run pytest tests/ -v` | — |
 
 ```bash
-# Lancer l'API FastAPI avec UV
+# Terminal 1
 uv run uvicorn backend.app.main:app --reload
 
-# L'API sera disponible sur http://localhost:8000
-# Documentation interactive : http://localhost:8000/docs
-```
-
-#### 2. Démarrer le Frontend (Terminal 2)
-
-```bash
-# Lancer l'interface Streamlit avec UV
+# Terminal 2
 uv run streamlit run frontend/app.py
 
-# L'interface sera disponible sur http://localhost:8501
+# Tests (optionnel)
+uv run pytest tests/ -v
+uv run pytest tests/ -m "not slow" -v   # exclure les tests lents
 ```
 
-#### 3. Tests et Validation
+### Avec Docker (`.devcontainer`)
+
+Image : Python 3.12, UV, pre-commit, ruff, pytest.  
+Le build exécute `scripts/setup.py` puis `scripts/train.py`.
 
 ```bash
-# Tests rapides
-uv run pytest tests/ -m "not slow" -v
-```
-
-### Avec Docker (`.devcontainer` – UV, pre-commit, pytest inclus)
-
-Tous les prérequis sont dans l'image (Python 3.12, UV, pre-commit, ruff, pytest, librairies du projet).  
-Le build exécute `setup.py` (données Olist) et `train_model.py` (entraînement).
-
-```bash
-# Depuis la racine du projet – build + démarrage backend (8000) et frontend (8501)
+# Depuis la racine du projet
 docker compose -f .devcontainer/compose.yaml up --build
 
 # En arrière-plan
 docker compose -f .devcontainer/compose.yaml up --build -d
 ```
 
-| Service    | Port | URL                                                |
-|------------|------|----------------------------------------------------|
-| **Backend**  | 8000 | http://localhost:8000, /docs, /api/v1/health       |
-| **Frontend** | 8501 | http://localhost:8501                              |
+| Service | Port | URL |
+|---------|------|-----|
+| **Backend** | 8000 | http://localhost:8000, /docs, /api/v1/health |
+| **Frontend** | 8501 | http://localhost:8501 |
 
 ```bash
-# Tests dans le conteneur
+# Tests et pre-commit dans le conteneur
 docker compose -f .devcontainer/compose.yaml run --rm backend uv run pytest tests/ -v
-
-# Pre-commit (formatage, lint)
 docker compose -f .devcontainer/compose.yaml run --rm backend uv run pre-commit run --all-files
 ```
 
 ### Vérification du Système
 
-1. **Santé de l'API** : http://localhost:8000/health (ou http://localhost:8000/api/v1/health)
-2. **Documentation** : http://localhost:8000/docs
-3. **Interface utilisateur** : http://localhost:8501
+| Vérification | URL |
+|--------------|-----|
+| **Santé de l'API** | http://localhost:8000/api/v1/health |
+| **Documentation** | http://localhost:8000/docs |
+| **Interface utilisateur** | http://localhost:8501 |
 
 ---
 
@@ -169,16 +173,17 @@ docker compose -f .devcontainer/compose.yaml run --rm backend uv run pre-commit 
 4. Analyser les résultats et visualisations
 
 #### Via l'API REST
-```bash
-# Obtenir des recommandations
-curl -X POST "http://localhost:8000/api/v1/recommendations" \
-     -H "Content-Type: application/json" \
-     -d '{"customer_id": "customer_001", "n_recommendations": 5}'
 
-# Lister les clients disponibles
+```bash
+# Lister les clients (récupérer un customer_id)
 curl "http://localhost:8000/api/v1/customers"
 
-# Voir les performances du modèle
+# Obtenir des recommandations (remplacer CUSTOMER_ID par un ID de /customers)
+curl -X POST "http://localhost:8000/api/v1/recommendations" \
+     -H "Content-Type: application/json" \
+     -d '{"customer_id": "CUSTOMER_ID", "n_recommendations": 5}'
+
+# Performances du modèle
 curl "http://localhost:8000/api/v1/model/info"
 ```
 
@@ -235,34 +240,30 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 ```
 olist_recommendation_system/
 ├── 📁 backend/                 # API FastAPI
-│   ├── app/
-│   │   ├── routers/           # Routes API
-│   │   │   └── recommendations.py
-│   │   ├── services/          # Logique métier
-│   │   │   └── recommendation_service.py
-│   │   ├── schemas/           # Validation Pydantic
-│   │   │   └── recommendation.py
-│   │   └── main.py            # Application principale
+│   └── app/
+│       ├── routers/           # Routes API (recommendations.py)
+│       ├── services/          # Logique métier (recommendation_service.py)
+│       ├── schemas/           # Validation Pydantic (recommendation.py)
+│       └── main.py
 ├── 📁 frontend/               # Interface Streamlit
-│   └── app.py                 # Application web
+│   └── app.py
 ├── 📁 ml_pipeline/            # Pipeline ML
-│   ├── models/               # Modèles ML
-│   │   └── recommendation_model.py
-│   ├── preprocessing/        # Feature engineering
-│   │   └── feature_engineering.py
-│   └── train_model.py        # Script d'entraînement
-├── 📁 data/                  # Données
-│   ├── raw/                  # Données brutes
-│   ├── processed/            # Données transformées
-│   └── models/               # Modèles sauvegardés
-├── 📁 scripts/               # Scripts utilitaires
-│   └── generate_demo_data.py # Génération données démo
-├── 📁 tests/                 # Tests automatisés
-├── 📁 .devcontainer/         # Docker : Dockerfile + compose (backend 8000, frontend 8501)
-├── config.py                 # Configuration globale
-├── requirements.txt          # Dépendances Python
-├── setup.py                  # Script de setup
-└── README.md                 # Ce fichier
+│   ├── models/                # Modèles (recommendation_model.py)
+│   ├── preprocessing/         # Feature engineering (feature_engineering.py)
+│   └── train_model.py         # Logique d'entraînement (appelé par scripts/train.py)
+├── 📁 config/                 # Configuration centralisée
+│   ├── __init__.py
+│   └── settings.py            # Chemins, MLConfig, APIConfig, DataConfig, etc.
+├── 📁 scripts/                # Scripts exécutables (hors racine)
+│   ├── setup.py               # .env.example + téléchargement données Olist
+│   └── train.py               # Entraînement (wrapper → ml_pipeline.train_model)
+├── 📁 data/                   # Données (raw, processed, models)
+├── 📁 docs/                   # Documentation
+├── 📁 tests/                  # Tests automatisés
+├── 📁 .devcontainer/          # Docker (Dockerfile + compose, ports 8000 / 8501)
+├── pyproject.toml
+├── uv.lock
+└── README.md
 ```
 
 ## Exercices pour les Étudiants
@@ -283,7 +284,7 @@ olist_recommendation_system/
 
 3. **Optimisation des hyperparamètres**
    ```python
-   # Modifier dans config.py
+   # Modifier dans config/settings.py
    RANDOM_FOREST_PARAMS = {
        'n_estimators': 200,  # Tester 50, 100, 200
        'max_depth': 15,      # Tester 10, 15, 20
@@ -300,30 +301,31 @@ olist_recommendation_system/
 5. **Déploiement**
    - Conteneuriser avec Docker : voir *Avec Docker* (`.devcontainer`) dans *Lancement de l'Application*
 
---
+---
 
 ## Tests et Validation
 
 ### Tests Manuels
 
 ```bash
-# 1. Vérifier l'API
-curl http://localhost:8000/health
+# 1. Santé de l'API
+curl http://localhost:8000/api/v1/health
 
-# 2. Tester une recommandation
+# 2. Clients disponibles
+curl "http://localhost:8000/api/v1/customers"
+
+# 3. Recommandations (utiliser un customer_id de l'étape 2)
 curl -X POST "http://localhost:8000/api/v1/recommendations" \
      -H "Content-Type: application/json" \
-     -d '{"customer_id": "customer_001"}'
+     -d '{"customer_id": "<customer_id>", "n_recommendations": 5}'
 
-# 3. Vérifier le modèle
-curl http://localhost:8000/api/v1/model/info
+# 4. Infos du modèle
+curl "http://localhost:8000/api/v1/model/info"
 ```
 
-### Tests Automatisés
+### Tests automatisés
 
-#### Avec UV
 ```bash
-# Tests via pytest 
 uv run pytest tests/ -v
 ```
 

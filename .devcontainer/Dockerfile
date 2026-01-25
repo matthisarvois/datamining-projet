@@ -39,8 +39,8 @@ RUN adduser \
     appuser
 
 # Setup + entraînement (données Olist + modèle ML) – exécution en root
-RUN uv run python setup.py \
-    && uv run python ml_pipeline/train_model.py
+RUN uv run python scripts/setup.py \
+    && uv run python scripts/train.py
 
 # Permissions pour data/ et logs/
 RUN chown -R appuser:appuser /app/data /app/logs 2>/dev/null || true

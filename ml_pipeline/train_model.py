@@ -17,12 +17,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from ml_pipeline.models.recommendation_model import RecommendationPipeline
-
-# Ajouter le répertoire parent au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent))
-
 from config import RAW_DATA_DIR
+from ml_pipeline.models.recommendation_model import RecommendationPipeline
 
 
 def check_data_availability(data_dir: Path) -> bool:
@@ -161,13 +157,13 @@ def main():
     print("\n" + "=" * 50)
     print("PROCHAINES ÉTAPES")
     print("" + "=" * 50)
-    print("1. Lancer l'API: uvicorn backend.app.main:app --reload")
-    print("2. Lancer le frontend: streamlit run frontend/app.py")
+    print("1. Lancer l'API: uv run uvicorn backend.app.main:app --reload")
+    print("2. Lancer le frontend: uv run streamlit run frontend/app.py")
     print("3. Tester les recommandations via l'interface web")
     print("4. Analyser les features importantes")
     print("5. Optimiser les hyperparamètres")
 
-    print("\n✨ Entraînement terminé avec succès! ✨")
+    print("\nEntrainement termine avec succes!")
 
 
 if __name__ == "__main__":
