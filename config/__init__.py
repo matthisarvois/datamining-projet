@@ -1,16 +1,16 @@
 """Configuration centralisée du projet Olist Recommendation System."""
 
 from .settings import (
-    APIConfig,
-    DataConfig,
+    DATA_DIR,
     LOGGING_CONFIG,
-    MLConfig,
+    LOGS_DIR,
+    MODELS_DIR,
     PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
     ROOT_DIR,
-    DATA_DIR,
-    LOGS_DIR,
-    MODELS_DIR,
+    APIConfig,
+    DataConfig,
+    MLConfig,
     StreamlitConfig,
 )
 

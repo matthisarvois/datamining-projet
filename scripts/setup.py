@@ -4,11 +4,10 @@ Usage: uv run python scripts/setup.py
 """
 
 import urllib.request
-from pathlib import Path
 
 import pandas as pd
 
-from config import RAW_DATA_DIR, DataConfig, ROOT_DIR
+from config import RAW_DATA_DIR, ROOT_DIR, DataConfig
 
 
 def download_olist_data():
