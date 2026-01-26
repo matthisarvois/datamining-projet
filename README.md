@@ -11,12 +11,12 @@
 # Installation
 pip install uv
 uv sync
-uv run python scripts/setup.py
-uv run python scripts/train.py
+uv run python src/scripts/setup.py
+uv run python src/scripts/train.py
 
 # Lancer l'app (2 terminaux)
-uv run uvicorn backend.app.main:app --reload    # Terminal 1 → http://localhost:8000
-uv run streamlit run frontend/app.py            # Terminal 2 → http://localhost:8501
+uv run uvicorn src.backend.app.main:app --reload    # Terminal 1 → http://localhost:8000
+uv run streamlit run src/frontend/app.py            # Terminal 2 → http://localhost:8501
 
 # Tests
 uv run pytest tests/ -v
@@ -291,12 +291,13 @@ datamining-projet/
 3. **Optimisation des hyperparamètres**
    ```python
    # Modifier dans src/config/settings.py
-   RANDOM_FOREST_PARAMS = {
-       'n_estimators': 200,  # Tester 50, 100, 200
-       'max_depth': 15,      # Tester 10, 15, 20
-       'min_samples_split': 3,
-       'min_samples_leaf': 1
-   }
+   class MLConfig:
+       RANDOM_FOREST_PARAMS = {
+           "n_estimators": 200,  # Tester 50, 100, 200
+           "max_depth": 15,      # Tester 10, 15, 20
+           "min_samples_split": 3,
+           "min_samples_leaf": 1
+       }
    ```
 
 4. **Algorithmes alternatifs**
