@@ -26,6 +26,16 @@ import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
+import pandas as pd
+import duckdb
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
 
 # Configuration de la page
 st.set_page_config(
@@ -360,6 +370,39 @@ def show_data_analysis_page():
         "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
     })
 
+    # 2. CHARGEMENT DES DONNÉES OLIST
+
+    # URL de base du dépôt officiel Olist (miroir Kaggle)
+    BASE_URL = "https://raw.githubusercontent.com/olist/work-at-olist-data/master/datasets/"
+
+    # Dictionnaire des fichiers principaux
+    files_urls = {
+    "customers": BASE_URL + "olist_customers_dataset.csv",
+    "orders": BASE_URL + "olist_orders_dataset.csv",
+    "order_items": BASE_URL + "olist_order_items_dataset.csv",
+    "products": BASE_URL + "olist_products_dataset.csv",
+    "reviews": BASE_URL + "olist_order_reviews_dataset.csv",
+    "sellers": BASE_URL + "olist_sellers_dataset.csv",
+    }
+
+    # Tentative de chargement des données réelles
+
+    df_customers = pd.read_csv(files_urls["customers"])
+    df_orders = pd.read_csv(files_urls["orders"])
+    df_order_items = pd.read_csv(files_urls["order_items"])
+    df_products = pd.read_csv(files_urls["products"])
+    df_reviews = pd.read_csv(files_urls["reviews"])
+
+    # Création d'une connexion DuckDB en mémoire
+    con = duckdb.connect(database=':memory:')
+
+    # Enregistrement des DataFrames pandas comme tables SQL
+    con.register('customers', df_customers)
+    con.register('orders', df_orders)
+    con.register('order_items', df_order_items)
+    con.register('products', df_products)
+    con.register('reviews', df_reviews)
+
     # -----------------------
     # Onglets
     # -----------------------
@@ -403,12 +446,23 @@ def show_data_analysis_page():
 
         st.markdown("### 📊 Distributions")
 
+        # Compute total orders per customer via DuckDB
+        query = """
+        SELECT
+            c.customer_unique_id,
+            COUNT(o.order_id) AS total_orders
+        FROM orders o
+        JOIN customers c
+            ON o.customer_id = c.customer_id
+        GROUP BY c.customer_unique_id
+        """
+        df_customers = con.execute(query).df()
         col1, col2 = st.columns(2)
 
         with col1:
             fig_orders = px.histogram(
-                df,
-                x="Total Orders",
+                df_customers,
+                x="total_orders",
                 nbins=10,
                 title="Distribution du nombre de commandes",
                 template=theme
