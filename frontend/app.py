@@ -332,90 +332,146 @@ def show_model_performance_page():
 
 
 def show_data_analysis_page():
-    """Page d'analyse exploratoire des données."""
+    """Page d'analyse exploratoire des données """
 
-    st.markdown("## 🔍 Analyse des Données")
-
-    # Simuler quelques analyses avec des données factices
-    st.markdown("### 👥 Distribution des Clients")
-
-    # Génération de données simulées pour la démo
     import numpy as np
+    import pandas as pd
+    import plotly.express as px
+    import streamlit as st
+
+    # Données simulées
 
     np.random.seed(42)
+    n_customers = 100
 
-    n_customers = 50
-    customer_data = {
+    df = pd.DataFrame({
         "Total Orders": np.random.poisson(3, n_customers) + 1,
         "Total Spent": np.random.exponential(200, n_customers) + 50,
         "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
         "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
-    }
+    })
 
-    df_customers = pd.DataFrame(customer_data)
+    # Onglets
 
-    col1, col2 = st.columns(2)
+    tab0, tab1, tab2, tab3, tab4 = st.tabs([
+        "ℹ️ Présentation",
+        "📌 Vue générale",
+        "👥 Comportement client",
+        "🔗 Corrélations",
+        "🧩 Segmentation RFM",
+    ])
+    # TAB 0 — Introduction
 
-    with col1:
-        # Distribution du nombre de commandes
-        fig_orders = px.histogram(
-            df_customers,
+    with tab0:
+        st.markdown("## Bienvenue dans l'Analyse Exploratoire des Données Olist")
+        st.write("""
+        Cette section permet de découvrir les habitudes d'achat des clients
+        à travers des visualisations interactives et des métriques clés.
+
+        Vous pourrez explorer :
+        - Les comportements d'achat individuels et globaux
+        - Les corrélations entre les différentes variables
+        - La segmentation RFM pour identifier les profils clients
+        """)
+
+     
+        # Image illustrative
+        st.image("images/analyse_dashboard.jpg", width=900)
+
+        # Petit mot de bienvenue 
+        st.markdown("💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients.")
+
+    # TAB 1 — Vue générale
+    
+
+    with tab1:
+        st.markdown("### 📌 Indicateurs clés")
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Clients", len(df))
+        col2.metric("Panier moyen (€)", f"{df['Total Spent'].mean():.0f}")
+        col3.metric("Commandes moyennes", f"{df['Total Orders'].mean():.1f}")
+        col4.metric("Note moyenne", f"{df['Avg Review Score'].mean():.2f}")
+
+        st.markdown("### 📊 Distributions")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig_orders = px.histogram(
+                df,
+                x="Total Orders",
+                nbins=10,
+                title="Distribution du nombre de commandes",
+            )
+            st.plotly_chart(fig_orders, use_container_width=True)
+
+        with col2:
+            fig_spent = px.box(
+                df,
+                y="Total Spent",
+                title="Distribution des montants dépensés (€)",
+            )
+            st.plotly_chart(fig_spent, use_container_width=True)
+
+    # TAB 2 — Comportement client
+
+    with tab2:
+        st.markdown("### 👥 Analyse du comportement d’achat")
+
+        fig_behavior = px.scatter(
+            df,
             x="Total Orders",
-            title="Distribution du nombre de commandes",
-            labels={"Total Orders": "Nombre de commandes", "count": "Nombre de clients"},
+            y="Total Spent",
+            color="Avg Review Score",
+            size="Days Since Last Order",
+            title="Fréquence d’achat vs Dépense vs Satisfaction",
+            labels={
+                "Total Orders": "Nombre de commandes",
+                "Total Spent": "Montant dépensé (€)",
+                "Avg Review Score": "Note moyenne",
+                "Days Since Last Order": "Récence (jours)",
+            },
         )
-        st.plotly_chart(fig_orders, use_container_width=True)
+        st.plotly_chart(fig_behavior, use_container_width=True)
 
-    with col2:
-        # Distribution des montants dépensés
-        fig_spent = px.histogram(
-            df_customers,
-            x="Total Spent",
-            title="Distribution des montants dépensés",
-            labels={"Total Spent": "Montant dépensé (€)", "count": "Nombre de clients"},
+    # TAB 3 — Corrélations
+    
+
+    with tab3:
+        st.markdown("### 🔗 Corrélations entre variables")
+
+        corr = df.corr()
+        fig_corr = px.imshow(
+            corr,
+            text_auto=".2f",
+            color_continuous_scale="RdBu",
+            title="Matrice de corrélation",
         )
-        st.plotly_chart(fig_spent, use_container_width=True)
+        st.plotly_chart(fig_corr, use_container_width=True)
 
-    # Corrélations
-    st.markdown("### 🔗 Analyse des Corrélations")
-    correlation_matrix = df_customers.corr()
 
-    fig_corr = px.imshow(
-        correlation_matrix,
-        text_auto=True,
-        aspect="auto",
-        title="Matrice de corrélation des features clients",
-    )
-    st.plotly_chart(fig_corr, use_container_width=True)
+    # TAB 4 — Segmentation RFM
+    
 
-    # Segmentation RFM simplifiée
-    st.markdown("### 📊 Segmentation RFM")
+    with tab4:
+        st.markdown("### 📊 Segmentation RFM simplifiée")
 
-    # Calculer des quartiles
-    df_customers["Recency_Score"] = pd.qcut(
-        df_customers["Days Since Last Order"], 4, labels=["4", "3", "2", "1"]
-    )
-    df_customers["Frequency_Score"] = pd.qcut(
-        df_customers["Total Orders"], 4, labels=["1", "2", "3", "4"], duplicates="drop"
-    )
-    df_customers["Monetary_Score"] = pd.qcut(
-        df_customers["Total Spent"], 4, labels=["1", "2", "3", "4"], duplicates="drop"
-    )
+        df["R"] = pd.qcut(df["Days Since Last Order"], 4, labels=[4, 3, 2, 1])
+        df["F"] = pd.qcut(df["Total Orders"], 4, labels=[1, 2, 3, 4])
+        df["M"] = pd.qcut(df["Total Spent"], 4, labels=[1, 2, 3, 4])
 
-    # Distribution des segments
-    segment_counts = (
-        df_customers.groupby(["Frequency_Score", "Monetary_Score"]).size().reset_index(name="Count")
-    )
+        rfm = df.groupby(["F", "M"]).size().reset_index(name="Clients")
 
-    fig_segments = px.scatter(
-        segment_counts,
-        x="Frequency_Score",
-        y="Monetary_Score",
-        size="Count",
-        title="Segmentation Fréquence vs Montant",
-        labels={"Frequency_Score": "Score de Fréquence", "Monetary_Score": "Score Monétaire"},
-    )
-    st.plotly_chart(fig_segments, use_container_width=True)
+        fig_rfm = px.scatter(
+            rfm,
+            x="F",
+            y="M",
+            size="Clients",
+            title="Segmentation Fréquence vs Monétaire",
+            labels={"F": "Fréquence", "M": "Monétaire"},
+        )
+        st.plotly_chart(fig_rfm, use_container_width=True)
 
 
 if __name__ == "__main__":
