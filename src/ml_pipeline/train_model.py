@@ -17,8 +17,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from config import RAW_DATA_DIR
-from ml_pipeline.models.recommendation_model import RecommendationPipeline
+from src.config import RAW_DATA_DIR
+
+# Ajouter le répertoire parent au PYTHONPATH
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from src.ml_pipeline.models.recommendation_model import RecommendationPipeline
 
 
 def check_data_availability(data_dir: Path) -> bool:

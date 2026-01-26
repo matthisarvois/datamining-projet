@@ -29,14 +29,14 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from ml_pipeline.preprocessing.feature_engineering import (
+from src.ml_pipeline.preprocessing.feature_engineering import (
     RecommendationFeatureEngine,
     load_and_prepare_data,
 )
 
 # Ajouter le répertoire parent au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent))
-from config import MLConfig
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+from src.config import MLConfig
 
 
 class OlistRecommendationModel:

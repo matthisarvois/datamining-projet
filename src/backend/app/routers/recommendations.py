@@ -19,13 +19,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ..schemas.recommendation import (
+from src.backend.app.schemas.recommendation import (
     CustomerRequest,
     HealthResponse,
     ModelInfoResponse,
     RecommendationResponse,
 )
-from ..services.recommendation_service import recommendation_service
+from src.backend.app.services.recommendation_service import recommendation_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

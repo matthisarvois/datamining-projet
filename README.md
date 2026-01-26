@@ -101,8 +101,8 @@ pip install uv
 uv sync
 
 # 4. Données + entraînement du modèle
-uv run python scripts/setup.py
-uv run python scripts/train.py
+uv run python src/scripts/setup.py
+uv run python src/scripts/train.py
 ```
 
 ## Lancement de l'Application
@@ -111,16 +111,16 @@ uv run python scripts/train.py
 
 | Étape | Commande | URL |
 |-------|----------|-----|
-| **1. Backend** (terminal 1) | `uv run uvicorn backend.app.main:app --reload` | http://localhost:8000, /docs |
-| **2. Frontend** (terminal 2) | `uv run streamlit run frontend/app.py` | http://localhost:8501 |
+| **1. Backend** (terminal 1) | `uv run uvicorn src.backend.app.main:app --reload` | http://localhost:8000, /docs |
+| **2. Frontend** (terminal 2) | `uv run streamlit run src/frontend/app.py` | http://localhost:8501 |
 | **3. Tests** | `uv run pytest tests/ -v` | — |
 
 ```bash
 # Terminal 1
-uv run uvicorn backend.app.main:app --reload
+uv run uvicorn src.backend.app.main:app --reload
 
 # Terminal 2
-uv run streamlit run frontend/app.py
+uv run streamlit run src/frontend/app.py
 
 # Tests (optionnel)
 uv run pytest tests/ -v
@@ -130,7 +130,7 @@ uv run pytest tests/ -m "not slow" -v   # exclure les tests lents
 ### Avec Docker (`.devcontainer`)
 
 Image : Python 3.12, UV, pre-commit, ruff, pytest.  
-Le build exécute `scripts/setup.py` puis `scripts/train.py`.
+Le build exécute `src/scripts/setup.py` puis `src/scripts/train.py`.
 
 ```bash
 # Depuis la racine du projet
@@ -238,28 +238,34 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 ## Structure du Projet
 
 ```
-olist_recommendation_system/
-├── 📁 backend/                 # API FastAPI
-│   └── app/
-│       ├── routers/           # Routes API (recommendations.py)
-│       ├── services/          # Logique métier (recommendation_service.py)
-│       ├── schemas/           # Validation Pydantic (recommendation.py)
-│       └── main.py
-├── 📁 frontend/               # Interface Streamlit
-│   └── app.py
-├── 📁 ml_pipeline/            # Pipeline ML
-│   ├── models/                # Modèles (recommendation_model.py)
-│   ├── preprocessing/         # Feature engineering (feature_engineering.py)
-│   └── train_model.py         # Logique d'entraînement (appelé par scripts/train.py)
-├── 📁 config/                 # Configuration centralisée
-│   ├── __init__.py
-│   └── settings.py            # Chemins, MLConfig, APIConfig, DataConfig, etc.
-├── 📁 scripts/                # Scripts exécutables (hors racine)
-│   ├── setup.py               # .env.example + téléchargement données Olist
-│   └── train.py               # Entraînement (wrapper → ml_pipeline.train_model)
+datamining-projet/
+├── 📁 src/                     # ✨ TOUT le code source
+│   ├── backend/                # API FastAPI
+│   │   └── app/
+│   │       ├── routers/       # Routes API (recommendations.py)
+│   │       ├── services/      # Logique métier (recommendation_service.py)
+│   │       ├── schemas/       # Validation Pydantic (recommendation.py)
+│   │       └── main.py
+│   ├── frontend/               # Interface Streamlit
+│   │   └── app.py
+│   ├── ml_pipeline/            # Pipeline ML
+│   │   ├── models/            # Modèles (recommendation_model.py)
+│   │   ├── preprocessing/     # Feature engineering (feature_engineering.py)
+│   │   └── train_model.py     # Logique d'entraînement
+│   ├── config/                 # Configuration centralisée
+│   │   ├── __init__.py
+│   │   └── settings.py        # Chemins, MLConfig, APIConfig, DataConfig
+│   └── scripts/                # Scripts exécutables
+│       ├── setup.py            # .env.example + téléchargement données
+│       └── train.py            # Entraînement (wrapper)
 ├── 📁 data/                   # Données (raw, processed, models)
 ├── 📁 docs/                   # Documentation
-├── 📁 tests/                  # Tests automatisés
+├── 📁 tests/                   # Tests miroir (un test par module de src/)
+│   ├── backend/               # Tests pour src/backend/
+│   ├── frontend/              # Tests pour src/frontend/
+│   ├── ml_pipeline/           # Tests pour src/ml_pipeline/
+│   ├── integration/           # Tests d'intégration
+│   └── unit/                  # Tests unitaires additionnels
 ├── 📁 .devcontainer/          # Docker (Dockerfile + compose, ports 8000 / 8501)
 ├── pyproject.toml
 ├── uv.lock
@@ -284,7 +290,7 @@ olist_recommendation_system/
 
 3. **Optimisation des hyperparamètres**
    ```python
-   # Modifier dans config/settings.py
+   # Modifier dans src/config/settings.py
    RANDOM_FOREST_PARAMS = {
        'n_estimators': 200,  # Tester 50, 100, 200
        'max_depth': 15,      # Tester 10, 15, 20
@@ -324,7 +330,6 @@ curl "http://localhost:8000/api/v1/model/info"
 ```
 
 ### Tests automatisés
-
 ```bash
 uv run pytest tests/ -v
 ```

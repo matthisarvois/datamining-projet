@@ -1,13 +1,13 @@
 """
 Script de setup : .env d'exemple, téléchargement des données Olist.
-Usage: uv run python scripts/setup.py
+Usage: uv run python src/scripts/setup.py
 """
 
 import urllib.request
 
 import pandas as pd
 
-from config import RAW_DATA_DIR, ROOT_DIR, DataConfig
+from src.config import RAW_DATA_DIR, ROOT_DIR, DataConfig
 
 
 def download_olist_data():
@@ -56,9 +56,9 @@ def main():
     print("SETUP TERMINÉ AVEC SUCCÈS!")
     print("=" * 50 + "\n")
     print("PROCHAINES ÉTAPES:")
-    print("  1. uv run python scripts/train.py")
-    print("  2. uv run uvicorn backend.app.main:app --reload")
-    print("  3. uv run streamlit run frontend/app.py")
+    print("  1. uv run python src/scripts/train.py")
+    print("  2. uv run uvicorn src.backend.app.main:app --reload")
+    print("  3. uv run streamlit run src/frontend/app.py")
     print("\nHappy coding! :)")
 
 

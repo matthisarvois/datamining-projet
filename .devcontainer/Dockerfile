@@ -39,8 +39,8 @@ RUN adduser \
     appuser
 
 # Setup + entraînement (données Olist + modèle ML) – exécution en root
-RUN uv run python scripts/setup.py \
-    && uv run python scripts/train.py
+RUN uv run python src/scripts/setup.py \
+    && uv run python src/scripts/train.py
 
 # Permissions pour data/ et logs/
 RUN chown -R appuser:appuser /app/data /app/logs 2>/dev/null || true
@@ -49,4 +49,4 @@ USER appuser
 
 EXPOSE 8000 8501
 
-CMD ["uv", "run", "uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "src.backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

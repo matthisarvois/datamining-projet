@@ -1,11 +1,11 @@
 """
 Point d'entrée pour l'entraînement du modèle.
-Usage: uv run python scripts/train.py [--data-dir PATH]  ou  uv run olist-train
+Usage: uv run python src/scripts/train.py [--data-dir PATH]  ou  uv run olist-train
 """
 
 import sys
 
-from ml_pipeline.train_model import main as _train_main
+from src.ml_pipeline.train_model import main as _train_main
 
 
 def main():

@@ -8,7 +8,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend"]
+packages = ["src"]
 
 
 [project]
@@ -116,10 +116,10 @@ Repository = "https://github.com/your-org/olist-recommendation-system.git"
 # 🎯 POINTS D'ENTRÉE
 # ==========================================
 [project.scripts]
-olist-train = "scripts.train:main"
-olist-api = "backend.app.main:main"
-olist-frontend = "frontend.app:main"
-olist-setup = "scripts.setup:main"
+olist-train = "src.scripts.train:main"
+olist-api = "src.backend.app.main:main"
+olist-frontend = "src.frontend.app:main"
+olist-setup = "src.scripts.setup:main"
 
 # ==========================================
 # 🔧 CONFIGURATION DES OUTILS
@@ -158,7 +158,7 @@ filterwarnings = [
 
 # Configuration coverage
 [tool.coverage.run]
-source = ["config", "ml_pipeline", "backend", "frontend", "scripts"]
+source = ["src"]
 omit = [
     "*/tests/*",
     "*/venv/*",

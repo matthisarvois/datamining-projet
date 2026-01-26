@@ -30,11 +30,11 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 # Ajouter le répertoire racine au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from backend.app.routers.recommendations import router as recommendations_router
-from backend.app.services.recommendation_service import recommendation_service
-from config import LOGS_DIR, APIConfig
+from src.backend.app.routers.recommendations import router as recommendations_router
+from src.backend.app.services.recommendation_service import recommendation_service
+from src.config import LOGS_DIR, APIConfig
 
 # Configuration du logging
 logging.basicConfig(

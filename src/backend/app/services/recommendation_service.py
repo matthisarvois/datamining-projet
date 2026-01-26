@@ -18,20 +18,19 @@ from typing import Any
 
 import pandas as pd
 
-from ml_pipeline.models.recommendation_model import OlistRecommendationModel
-from ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer
-
 # Ajouter le répertoire racine au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent))
 
-from backend.app.schemas.recommendation import (
+from src.backend.app.schemas.recommendation import (
     FeatureImportance,
     ModelInfoResponse,
     ModelMetrics,
     Recommendation,
     RecommendationResponse,
 )
-from config import MLConfig
+from src.config import MLConfig
+from src.ml_pipeline.models.recommendation_model import OlistRecommendationModel
+from src.ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer
 
 logger = logging.getLogger(__name__)
 

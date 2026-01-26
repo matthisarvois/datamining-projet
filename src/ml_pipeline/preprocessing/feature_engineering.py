@@ -38,7 +38,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 # Ajouter le répertoire parent au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 
 class CustomerFeatureEngineer(BaseEstimator, TransformerMixin):
