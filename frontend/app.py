@@ -332,7 +332,7 @@ def show_model_performance_page():
 
 
 def show_data_analysis_page():
-    """Page d'analyse exploratoire des données """
+    """Page d'analyse exploratoire des données"""
 
     import numpy as np
     import pandas as pd
@@ -344,22 +344,26 @@ def show_data_analysis_page():
     np.random.seed(42)
     n_customers = 100
 
-    df = pd.DataFrame({
-        "Total Orders": np.random.poisson(3, n_customers) + 1,
-        "Total Spent": np.random.exponential(200, n_customers) + 50,
-        "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
-        "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
-    })
+    df = pd.DataFrame(
+        {
+            "Total Orders": np.random.poisson(3, n_customers) + 1,
+            "Total Spent": np.random.exponential(200, n_customers) + 50,
+            "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
+            "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
+        }
+    )
 
     # Onglets
 
-    tab0, tab1, tab2, tab3, tab4 = st.tabs([
-        "ℹ️ Présentation",
-        "📌 Vue générale",
-        "👥 Comportement client",
-        "🔗 Corrélations",
-        "🧩 Segmentation RFM",
-    ])
+    tab0, tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "ℹ️ Présentation",
+            "📌 Vue générale",
+            "👥 Comportement client",
+            "🔗 Corrélations",
+            "🧩 Segmentation RFM",
+        ]
+    )
     # TAB 0 — Introduction
 
     with tab0:
@@ -374,15 +378,15 @@ def show_data_analysis_page():
         - La segmentation RFM pour identifier les profils clients
         """)
 
-     
         # Image illustrative
         st.image("images/analyse_dashboard.jpg", width=900)
 
-        # Petit mot de bienvenue 
-        st.markdown("💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients.")
+        # Petit mot de bienvenue
+        st.markdown(
+            "💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients."
+        )
 
     # TAB 1 — Vue générale
-    
 
     with tab1:
         st.markdown("### 📌 Indicateurs clés")
@@ -436,7 +440,6 @@ def show_data_analysis_page():
         st.plotly_chart(fig_behavior, use_container_width=True)
 
     # TAB 3 — Corrélations
-    
 
     with tab3:
         st.markdown("### 🔗 Corrélations entre variables")
@@ -450,9 +453,7 @@ def show_data_analysis_page():
         )
         st.plotly_chart(fig_corr, use_container_width=True)
 
-
     # TAB 4 — Segmentation RFM
-    
 
     with tab4:
         st.markdown("### 📊 Segmentation RFM simplifiée")
