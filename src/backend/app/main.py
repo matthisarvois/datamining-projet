@@ -102,8 +102,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Middleware de sécurité pour les hosts autorisés
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0"])
+# Middleware de sécurité pour les hosts autorisés (incl. "backend" pour les appels depuis le conteneur frontend Docker)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["localhost", "127.0.0.1", "0.0.0.0", "backend", "backend:8000"],
+)
 
 
 # Gestionnaire d'exceptions global

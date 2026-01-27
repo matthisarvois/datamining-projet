@@ -12,7 +12,8 @@
 pip install uv
 uv sync
 uv run python src/scripts/setup.py
-uv run python src/scripts/train.py
+uv run python src/scripts/train.py                      # Recommandation
+uv run python src/scripts/train_satisfaction.py         # Satisfaction client (optionnel)
 
 # Lancer l'app (2 terminaux)
 uv run uvicorn src.backend.app.main:app --reload    # Terminal 1 → http://localhost:8000
@@ -46,9 +47,10 @@ Ce projet implémente un **système de recommandation complet** pour la platefor
 
 Le système permet de :
 - Générer des recommandations personnalisées pour chaque client
-- Visualiser les performances du modèle ML en temps réel
+- Visualiser les performances des modèles ML (recommandation + satisfaction) en temps réel
+- Prédire la satisfaction client (score d’avis 1–5) via un simulateur dans Streamlit
 - Explorer les données et analyser les patterns
-- Tester l'API via une interface utilisateur intuitive
+- Tester l’API via une interface utilisateur intuitive
 
 ---
 
@@ -100,14 +102,17 @@ pip install uv
 # 3. Dépendances (UV uniquement)
 uv sync
 
-# 4. Données + entraînement du modèle
+# 4. Données + entraînement des modèles
 uv run python src/scripts/setup.py
-uv run python src/scripts/train.py
+uv run python src/scripts/train.py                      # Modèle de recommandation
+uv run python src/scripts/train_satisfaction.py         # Modèle de satisfaction client (optionnel)
 ```
 
 ## Lancement de l'Application
 
 ### En local (UV)
+
+Après `uv run python src/scripts/setup.py`, `train.py` et (optionnel) `train_satisfaction.py` :
 
 | Étape | Commande | URL |
 |-------|----------|-----|
@@ -116,10 +121,10 @@ uv run python src/scripts/train.py
 | **3. Tests** | `uv run pytest tests/ -v` | — |
 
 ```bash
-# Terminal 1
+# Terminal 1 – API
 uv run uvicorn src.backend.app.main:app --reload
 
-# Terminal 2
+# Terminal 2 – Interface (Recommandations, Performance du Modèle, Satisfaction Client, Analyse des Données)
 uv run streamlit run src/frontend/app.py
 
 # Tests (optionnel)
@@ -127,10 +132,12 @@ uv run pytest tests/ -v
 uv run pytest tests/ -m "not slow" -v   # exclure les tests lents
 ```
 
+La page **Satisfaction Client** et les métriques « Modèle de Satisfaction Client » dans **Performance du Modèle** nécessitent d’avoir exécuté `uv run python src/scripts/train_satisfaction.py` au moins une fois.
+
 ### Avec Docker (`.devcontainer`)
 
 Image : Python 3.12, UV, pre-commit, ruff, pytest.  
-Le build exécute `src/scripts/setup.py` puis `src/scripts/train.py`.
+Le build exécute `src/scripts/setup.py`, puis `src/scripts/train.py` (recommandation), puis `src/scripts/train_satisfaction.py` (satisfaction client). Les deux modèles sont prêts dans l’image.
 
 ```bash
 # Depuis la racine du projet
@@ -143,12 +150,16 @@ docker compose -f .devcontainer/compose.yaml up --build -d
 | Service | Port | URL |
 |---------|------|-----|
 | **Backend** | 8000 | http://localhost:8000, /docs, /api/v1/health |
-| **Frontend** | 8501 | http://localhost:8501 |
+| **Frontend** | 8501 | http://localhost:8501 (Recommandations, Performance du Modèle, Satisfaction Client, Analyse des Données) |
 
 ```bash
 # Tests et pre-commit dans le conteneur
 docker compose -f .devcontainer/compose.yaml run --rm backend uv run pytest tests/ -v
 docker compose -f .devcontainer/compose.yaml run --rm backend uv run pre-commit run --all-files
+
+# Ré-entraîner les modèles dans le conteneur (optionnel, sans rebuild)
+docker compose -f .devcontainer/compose.yaml run --rm backend uv run python src/scripts/train.py
+docker compose -f .devcontainer/compose.yaml run --rm backend uv run python src/scripts/train_satisfaction.py
 ```
 
 ### Vérification du Système
@@ -163,13 +174,22 @@ docker compose -f .devcontainer/compose.yaml run --rm backend uv run pre-commit 
 
 ## Utilisation du Système
 
+### Pages de l’interface Streamlit
+
+| Page | Description |
+|------|-------------|
+| **Recommandations** | Sélection d’un client, génération de recommandations produits, visualisations |
+| **Performance du Modèle** | Métriques et importance des features pour le modèle de **recommandation** (API) et le modèle de **satisfaction client** (local) |
+| **Satisfaction Client** | Simulateur : saisie des caractéristiques commande/client → prédiction du score d’avis (1–5) |
+| **Analyse des Données** | Distributions, corrélations, segmentation RFM (données de démo) |
+
 ### Génération de Recommandations
 
-#### Via l'Interface Streamlit
+#### Via l’interface Streamlit (page « Recommandations »)
 
 1. Sélectionner un client dans la liste
 2. Choisir le nombre de recommandations
-3. Cliquer sur "Générer les recommandations"
+3. Cliquer sur « Générer les recommandations »
 4. Analyser les résultats et visualisations
 
 #### Via l'API REST
@@ -198,6 +218,37 @@ Le système fournit plusieurs métriques :
 
 ---
 
+## Entraînement des modèles
+
+Les modèles sont sauvegardés dans `data/models/`. Ordre conseillé : setup une fois, puis entraînement de chaque modèle.  
+Le modèle de **satisfaction** est requis pour la page Streamlit « Satisfaction Client » et pour les métriques « Modèle de Satisfaction Client » dans l’onglet « Performance du Modèle ».
+
+| Étape | Commande | Fichier produit |
+|-------|----------|------------------|
+| **1. Données** | `uv run python src/scripts/setup.py` | `data/raw/*.csv` |
+| **2. Recommandation** | `uv run python src/scripts/train.py` | `data/models/recommendation_model.joblib` |
+| **3. Satisfaction client** | `uv run python src/scripts/train_satisfaction.py` | `data/models/satisfaction_model.joblib` |
+
+```bash
+# 1. Télécharger les données Olist (à faire une fois)
+uv run python src/scripts/setup.py
+
+# 2. Entraîner le modèle de recommandation
+uv run python src/scripts/train.py
+
+# 3. Entraîner le modèle de satisfaction client (review_score 1–5)
+uv run python src/scripts/train_satisfaction.py
+```
+
+**Option** : préciser le dossier des données brutes avec `--data-dir` :
+
+```bash
+uv run python src/scripts/train.py --data-dir /chemin/vers/data/raw
+uv run python src/scripts/train_satisfaction.py --data-dir /chemin/vers/data/raw
+```
+
+---
+
 ## Machine Learning Pipeline
 
 ### Feature Engineering
@@ -222,6 +273,18 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 - **Features hybrides** (client + produit + contexte)
 - **Échantillonnage stratifié** des exemples négatifs
 - **Validation croisée 5-fold**
+
+### Modèle de Satisfaction Client
+
+**HistGradientBoostingRegressor** (régression) pour prédire le **score d’avis** (1–5) à partir de :
+- Livraison : délai réel, retard vs date estimée
+- Commande : nb articles, montant, fret, panier moyen
+- Client : nb commandes, dépense totale, première commande ou non
+- Saisonnalité : mois, jour de la semaine  
+
+Fichier produit : `data/models/satisfaction_model.joblib`. Entraînement : `uv run python src/scripts/train_satisfaction.py`.
+
+**Explication détaillée** (type de modèle, choix des variables, pourquoi le R² reste modéré, pipeline, limites, pistes d’amélioration) : [docs/modele_satisfaction_client.md](docs/modele_satisfaction_client.md)
 
 ### Évaluation du Modèle
 
@@ -249,15 +312,17 @@ datamining-projet/
 │   ├── frontend/               # Interface Streamlit
 │   │   └── app.py
 │   ├── ml_pipeline/            # Pipeline ML
-│   │   ├── models/            # Modèles (recommendation_model.py)
+│   │   ├── models/            # Modèles (recommendation_model.py, satisfaction_model.py)
 │   │   ├── preprocessing/     # Feature engineering (feature_engineering.py)
-│   │   └── train_model.py     # Logique d'entraînement
+│   │   ├── train_model.py     # Entraînement recommandation
+│   │   └── train_satisfaction.py  # Entraînement satisfaction client
 │   ├── config/                 # Configuration centralisée
 │   │   ├── __init__.py
 │   │   └── settings.py        # Chemins, MLConfig, APIConfig, DataConfig
 │   └── scripts/                # Scripts exécutables
 │       ├── setup.py            # .env.example + téléchargement données
-│       └── train.py            # Entraînement (wrapper)
+│       ├── train.py            # Entraînement recommandation (wrapper)
+│       └── train_satisfaction.py  # Entraînement satisfaction client (wrapper)
 ├── 📁 data/                   # Données (raw, processed, models)
 ├── 📁 docs/                   # Documentation
 ├── 📁 tests/                   # Tests miroir (un test par module de src/)
