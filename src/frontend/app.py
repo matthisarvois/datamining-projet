@@ -25,7 +25,6 @@ import warnings
 from pathlib import Path
 
 import duckdb
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
@@ -143,6 +142,7 @@ def main():
                 "📊 Performance du Modèle",
                 "😊 Satisfaction Client",
                 "🔍 Analyse des Données",
+                "😎 CV de Enzo Potier",
             ],
         )
 
@@ -164,6 +164,8 @@ def main():
         show_satisfaction_page()
     elif page == "🔍 Analyse des Données":
         show_data_analysis_page()
+    elif page == "😎 CV de Enzo Potier":
+        show_enzo_cv_page()
 
 
 def show_recommendations_page():
@@ -475,7 +477,7 @@ def show_satisfaction_page():
 
 
 def show_data_analysis_page():
-    """Page d'analyse exploratoire des données avec choix de thème."""
+    """Page d'analyse exploratoire des données Olist avec choix de thème et visualisations."""
 
     import pandas as pd
     import plotly.express as px
@@ -490,36 +492,16 @@ def show_data_analysis_page():
     )
 
     # -----------------------
-    # Données simulées
+    # Chargement des données Olist
     # -----------------------
-    np.random.seed(42)
-    n_customers = 100
-
-    df = pd.DataFrame(
-        {
-            "Total Orders": np.random.poisson(3, n_customers) + 1,
-            "Total Spent": np.random.exponential(200, n_customers) + 50,
-            "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
-            "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
-        }
-    )
-
-    # 2. CHARGEMENT DES DONNÉES OLIST
-
-    # URL de base du dépôt officiel Olist (miroir Kaggle)
     BASE_URL = "https://raw.githubusercontent.com/olist/work-at-olist-data/master/datasets/"
-
-    # Dictionnaire des fichiers principaux
     files_urls = {
         "customers": BASE_URL + "olist_customers_dataset.csv",
         "orders": BASE_URL + "olist_orders_dataset.csv",
         "order_items": BASE_URL + "olist_order_items_dataset.csv",
         "products": BASE_URL + "olist_products_dataset.csv",
         "reviews": BASE_URL + "olist_order_reviews_dataset.csv",
-        "sellers": BASE_URL + "olist_sellers_dataset.csv",
     }
-
-    # Tentative de chargement des données réelles
 
     df_customers = pd.read_csv(files_urls["customers"])
     df_orders = pd.read_csv(files_urls["orders"])
@@ -527,10 +509,8 @@ def show_data_analysis_page():
     df_products = pd.read_csv(files_urls["products"])
     df_reviews = pd.read_csv(files_urls["reviews"])
 
-    # Création d'une connexion DuckDB en mémoire
+    # Connexion DuckDB
     con = duckdb.connect(database=":memory:")
-
-    # Enregistrement des DataFrames pandas comme tables SQL
     con.register("customers", df_customers)
     con.register("orders", df_orders)
     con.register("order_items", df_order_items)
@@ -540,13 +520,14 @@ def show_data_analysis_page():
     # -----------------------
     # Onglets
     # -----------------------
-    tab0, tab1, tab2, tab3, tab4 = st.tabs(
+    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "ℹ️ Présentation",
             "📌 Vue générale",
             "👥 Comportement client",
             "🔗 Corrélations",
             "🧩 Segmentation RFM",
+            "🚚 Livraison & commandes",
         ]
     )
 
@@ -555,115 +536,156 @@ def show_data_analysis_page():
     # -----------------------
     with tab0:
         st.markdown("## Bienvenue dans l'Analyse Exploratoire des Données Olist")
-        st.write("""
-        Cette section permet de découvrir les habitudes d'achat des clients
-        à travers des visualisations interactives et des métriques clés.
-
-        Vous pourrez explorer :
-        - Les comportements d'achat individuels et globaux
-        - Les corrélations entre les différentes variables
-        - La segmentation RFM pour identifier les profils clients
-        """)
-
-        st.image("images/analyse_dashboard.jpg", width=900)
-        st.markdown(
-            "💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients."
+        st.write(
+            """
+            Explorez les habitudes d'achat des clients via :
+            - Comportements individuels et globaux
+            - Corrélations entre indicateurs
+            - Segmentation RFM
+            """
         )
+
+    # -----------------------
+    # Requête SQL principale
+    # -----------------------
+    query = """
+    WITH delivered_orders AS (
+        SELECT o.order_id, o.customer_id, o.order_purchase_timestamp
+        FROM orders o
+        WHERE o.order_status = 'delivered'
+    ),
+    orders_with_customer AS (
+        SELECT c.customer_unique_id, d.order_id, d.order_purchase_timestamp
+        FROM delivered_orders d
+        JOIN customers c
+            ON d.customer_id = c.customer_id
+    ),
+    monetary AS (
+        SELECT owc.customer_unique_id,
+               SUM(oi.price + oi.freight_value) AS total_spent
+        FROM orders_with_customer owc
+        JOIN order_items oi
+            ON owc.order_id = oi.order_id
+        GROUP BY owc.customer_unique_id
+    ),
+    frequency_recency AS (
+        SELECT customer_unique_id,
+               COUNT(DISTINCT order_id) AS total_orders,
+               DATE_DIFF('day', MAX(order_purchase_timestamp)::DATE, CURRENT_DATE) AS days_since_last_order
+        FROM orders_with_customer
+        GROUP BY customer_unique_id
+    ),
+    reviews AS (
+        SELECT owc.customer_unique_id,
+               AVG(r.review_score) AS avg_review_score
+        FROM orders_with_customer owc
+        JOIN reviews r
+            ON owc.order_id = r.order_id
+        GROUP BY owc.customer_unique_id
+    )
+    SELECT fr.customer_unique_id,
+           fr.total_orders,
+           fr.days_since_last_order,
+           r.avg_review_score,
+           m.total_spent
+    FROM frequency_recency fr
+    LEFT JOIN monetary m ON fr.customer_unique_id = m.customer_unique_id
+    LEFT JOIN reviews r ON fr.customer_unique_id = r.customer_unique_id
+    """
+
+    df_clients = con.execute(query).df()
 
     # -----------------------
     # TAB 1 — Vue générale
     # -----------------------
     with tab1:
         st.markdown("### 📌 Indicateurs clés")
-
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Clients", len(df))
-        col2.metric("Panier moyen (€)", f"{df['Total Spent'].mean():.0f}")
-        col3.metric("Commandes moyennes", f"{df['Total Orders'].mean():.1f}")
-        col4.metric("Note moyenne", f"{df['Avg Review Score'].mean():.2f}")
+        col1.metric("Clients", len(df_clients))
+        col2.metric("Panier moyen (€)", f"{df_clients['total_spent'].mean():.0f}")
+        col3.metric("Commandes moyennes", f"{df_clients['total_orders'].mean():.1f}")
+        col4.metric("Note moyenne", f"{df_clients['avg_review_score'].mean():.2f}")
 
         st.markdown("### 📊 Distributions")
-
-        # Compute total orders per customer via DuckDB
-        query = """
-        SELECT
-            c.customer_unique_id,
-            COUNT(o.order_id) AS total_orders
-        FROM orders o
-        JOIN customers c
-            ON o.customer_id = c.customer_id
-        GROUP BY c.customer_unique_id
-        """
-        df_customers = con.execute(query).df()
-        col1, col2 = st.columns(2)
-
-        with col1:
-            fig_orders = px.histogram(
-                df_customers,
-                x="total_orders",
-                nbins=10,
-                title="Distribution du nombre de commandes",
-                template=theme,
-            )
-            st.plotly_chart(fig_orders, use_container_width=True)
-
-        with col2:
-            fig_spent = px.box(
-                df, y="Total Spent", title="Distribution des montants dépensés (€)", template=theme
-            )
-            st.plotly_chart(fig_spent, use_container_width=True)
+        fig_orders = px.histogram(
+            df_clients,
+            x="total_orders",
+            nbins=10,
+            title="Distribution du nombre de commandes",
+            template=theme,
+        )
+        fig_spent = px.box(
+            df_clients,
+            y="total_spent",
+            title="Distribution des montants dépensés (€)",
+            template=theme,
+        )
+        st.plotly_chart(fig_orders, width="stretch")
+        st.plotly_chart(fig_spent, width="stretch")
 
     # -----------------------
     # TAB 2 — Comportement client
     # -----------------------
     with tab2:
         st.markdown("### 👥 Analyse du comportement d’achat")
-
         fig_behavior = px.scatter(
-            df,
-            x="Total Orders",
-            y="Total Spent",
-            color="Avg Review Score",
-            size="Days Since Last Order",
-            title="Fréquence d’achat vs Dépense vs Satisfaction",
+            df_clients,
+            x="total_orders",
+            y="total_spent",
+            color="avg_review_score",
+            size="days_since_last_order",
+            title="Fréquence vs Dépense vs Satisfaction",
             labels={
-                "Total Orders": "Nombre de commandes",
-                "Total Spent": "Montant dépensé (€)",
-                "Avg Review Score": "Note moyenne",
-                "Days Since Last Order": "Récence (jours)",
+                "total_orders": "Nombre de commandes",
+                "total_spent": "Montant dépensé (€)",
+                "avg_review_score": "Note moyenne",
+                "days_since_last_order": "Récence (jours)",
             },
             template=theme,
         )
-        st.plotly_chart(fig_behavior, use_container_width=True)
+        st.plotly_chart(fig_behavior, width="stretch")
 
     # -----------------------
-    # TAB 3 — Corrélations
+    # TAB 2 — Tableau clients
+    # -----------------------
+    with tab2:
+        st.markdown("### 🔢 Tableau client individuel")
+        # Tronquer ID pour lisibilité
+        df_display = df_clients.copy()
+        df_display["customer_unique_id"] = df_display["customer_unique_id"].str[:6]
+        st.dataframe(df_display)
+
+    # -----------------------
+    # TAB 3 — Corrélation
     # -----------------------
     with tab3:
-        st.markdown("### 🔗 Corrélations entre variables")
-
-        corr = df.corr()
+        st.markdown("### 🔗 Matrice de corrélation")
+        numeric_cols = df_clients.select_dtypes(include="number")
+        corr = numeric_cols.corr()
         fig_corr = px.imshow(
             corr,
             text_auto=".2f",
             color_continuous_scale="RdBu",
-            title="Matrice de corrélation",
+            title="Corrélation entre indicateurs clients",
             template=theme,
         )
-        st.plotly_chart(fig_corr, use_container_width=True)
+        st.plotly_chart(fig_corr, width="stretch")
 
     # -----------------------
     # TAB 4 — Segmentation RFM
     # -----------------------
-    with tab4:
-        st.markdown("### 📊 Segmentation RFM simplifiée")
-
-        df["R"] = pd.qcut(df["Days Since Last Order"], 4, labels=[4, 3, 2, 1])
-        df["F"] = pd.qcut(df["Total Orders"], 4, labels=[1, 2, 3, 4])
-        df["M"] = pd.qcut(df["Total Spent"], 4, labels=[1, 2, 3, 4])
-
-        rfm = df.groupby(["F", "M"]).size().reset_index(name="Clients")
-
+    with tab4:  # si tu veux un onglet RFM séparé, remplacer tab4 par tab5 et ajuster
+        st.markdown("### 📊 Segmentation RFM")
+        df_clients["R"] = (
+            pd.qcut(df_clients["days_since_last_order"], q=4, labels=False, duplicates="drop") + 1
+        )
+        df_clients["F"] = (
+            pd.qcut(df_clients["total_orders"], q=4, labels=False, duplicates="drop") + 1
+        )
+        df_clients["M"] = (
+            pd.qcut(df_clients["total_spent"], q=4, labels=False, duplicates="drop") + 1
+        )
+        rfm = df_clients.groupby(["F", "M"]).size().reset_index(name="Clients")
         fig_rfm = px.scatter(
             rfm,
             x="F",
@@ -673,7 +695,83 @@ def show_data_analysis_page():
             labels={"F": "Fréquence", "M": "Monétaire"},
             template=theme,
         )
-        st.plotly_chart(fig_rfm, use_container_width=True)
+        st.plotly_chart(fig_rfm, width="stretch")
+
+    # -----------------------
+    # TAB 5 — Livraison & évolution commandes
+    # -----------------------
+    with tab5:
+        st.markdown("### 🚚 Temps de livraison et évolution des commandes")
+        df_orders["order_purchase_timestamp"] = pd.to_datetime(
+            df_orders["order_purchase_timestamp"]
+        )
+        df_orders["order_delivered_customer_date"] = pd.to_datetime(
+            df_orders["order_delivered_customer_date"]
+        )
+        df_orders["delivery_time_days"] = (
+            df_orders["order_delivered_customer_date"] - df_orders["order_purchase_timestamp"]
+        ).dt.days
+
+        # Livraison moyenne par mois
+        df_orders["month"] = df_orders["order_purchase_timestamp"].dt.to_period("M")
+        delivery_by_month = df_orders.groupby("month")["delivery_time_days"].mean().reset_index()
+        delivery_by_month["month"] = delivery_by_month["month"].dt.to_timestamp()
+        fig_delivery = px.bar(
+            delivery_by_month,
+            x="month",
+            y="delivery_time_days",
+            title="Temps de livraison moyen par mois",
+            labels={"month": "Mois", "delivery_time_days": "Temps de livraison moyen (jours)"},
+            template=theme,
+        )
+        st.plotly_chart(fig_delivery, width="stretch")
+
+        # Évolution du nombre de commandes
+        orders_over_time = (
+            df_orders.groupby(df_orders["order_purchase_timestamp"].dt.to_period("M"))
+            .size()
+            .reset_index(name="nb_orders")
+        )
+        orders_over_time["order_purchase_timestamp"] = orders_over_time[
+            "order_purchase_timestamp"
+        ].dt.to_timestamp()
+        fig_orders_time = px.line(
+            orders_over_time,
+            x="order_purchase_timestamp",
+            y="nb_orders",
+            title="Évolution du nombre de commandes",
+            labels={"order_purchase_timestamp": "Date", "nb_orders": "Nombre de commandes"},
+            template=theme,
+        )
+        st.plotly_chart(fig_orders_time, width="stretch")
+
+
+def show_enzo_cv_page():
+    """Affiche le CV d'Enzo Potier dans un onglet Streamlit et propose le téléchargement."""
+    st.markdown("## 😎 CV de Enzo Potier")
+    st.write("Voici le CV de mon camarade Enzo Potier.")
+
+    cv_path = "images/cv_enzo_potier.pdf"
+
+    if os.path.exists(cv_path):
+        # Lecture du PDF pour le téléchargement
+        with open(cv_path, "rb") as f:
+            pdf_data = f.read()
+        st.download_button(
+            label="📄 Télécharger le CV",
+            data=pdf_data,
+            file_name="cv_enzo_potier.pdf",
+            mime="application/pdf",
+        )
+
+    cv_image_path = "images/cv_enzo_potier.png"  # chemin vers ton PNG
+
+    try:
+        st.image(cv_image_path, width=700)
+    except FileNotFoundError:
+        st.warning(
+            "Image du CV introuvable. Place le fichier `cv_enzo_potier.png` dans le dossier `images/`."
+        )
 
 
 if __name__ == "__main__":
