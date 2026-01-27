@@ -21,22 +21,17 @@ Architecture:
 
 import os
 import sys
+import warnings
 from pathlib import Path
 
+import duckdb
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
-import pandas as pd
-import duckdb
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime
-import warnings
-warnings.filterwarnings('ignore')
+
+warnings.filterwarnings("ignore")
 
 # Configuration de la page
 st.set_page_config(
@@ -345,7 +340,6 @@ def show_model_performance_page():
 def show_data_analysis_page():
     """Page d'analyse exploratoire des données avec choix de thème."""
 
-    import numpy as np
     import pandas as pd
     import plotly.express as px
     import streamlit as st
@@ -355,7 +349,7 @@ def show_data_analysis_page():
     # -----------------------
     theme = st.sidebar.selectbox(
         "🎨 Choisir le thème des graphiques",
-        ["plotly", "plotly_dark", "ggplot2", "seaborn", "simple_white"]
+        ["plotly", "plotly_dark", "ggplot2", "seaborn", "simple_white"],
     )
 
     # -----------------------
@@ -364,12 +358,14 @@ def show_data_analysis_page():
     np.random.seed(42)
     n_customers = 100
 
-    df = pd.DataFrame({
-        "Total Orders": np.random.poisson(3, n_customers) + 1,
-        "Total Spent": np.random.exponential(200, n_customers) + 50,
-        "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
-        "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
-    })
+    df = pd.DataFrame(
+        {
+            "Total Orders": np.random.poisson(3, n_customers) + 1,
+            "Total Spent": np.random.exponential(200, n_customers) + 50,
+            "Avg Review Score": np.random.normal(4.0, 0.8, n_customers).clip(1, 5),
+            "Days Since Last Order": np.random.exponential(30, n_customers) + 1,
+        }
+    )
 
     # 2. CHARGEMENT DES DONNÉES OLIST
 
@@ -378,12 +374,12 @@ def show_data_analysis_page():
 
     # Dictionnaire des fichiers principaux
     files_urls = {
-    "customers": BASE_URL + "olist_customers_dataset.csv",
-    "orders": BASE_URL + "olist_orders_dataset.csv",
-    "order_items": BASE_URL + "olist_order_items_dataset.csv",
-    "products": BASE_URL + "olist_products_dataset.csv",
-    "reviews": BASE_URL + "olist_order_reviews_dataset.csv",
-    "sellers": BASE_URL + "olist_sellers_dataset.csv",
+        "customers": BASE_URL + "olist_customers_dataset.csv",
+        "orders": BASE_URL + "olist_orders_dataset.csv",
+        "order_items": BASE_URL + "olist_order_items_dataset.csv",
+        "products": BASE_URL + "olist_products_dataset.csv",
+        "reviews": BASE_URL + "olist_order_reviews_dataset.csv",
+        "sellers": BASE_URL + "olist_sellers_dataset.csv",
     }
 
     # Tentative de chargement des données réelles
@@ -395,25 +391,27 @@ def show_data_analysis_page():
     df_reviews = pd.read_csv(files_urls["reviews"])
 
     # Création d'une connexion DuckDB en mémoire
-    con = duckdb.connect(database=':memory:')
+    con = duckdb.connect(database=":memory:")
 
     # Enregistrement des DataFrames pandas comme tables SQL
-    con.register('customers', df_customers)
-    con.register('orders', df_orders)
-    con.register('order_items', df_order_items)
-    con.register('products', df_products)
-    con.register('reviews', df_reviews)
+    con.register("customers", df_customers)
+    con.register("orders", df_orders)
+    con.register("order_items", df_order_items)
+    con.register("products", df_products)
+    con.register("reviews", df_reviews)
 
     # -----------------------
     # Onglets
     # -----------------------
-    tab0, tab1, tab2, tab3, tab4 = st.tabs([
-        "ℹ️ Présentation",
-        "📌 Vue générale",
-        "👥 Comportement client",
-        "🔗 Corrélations",
-        "🧩 Segmentation RFM",
-    ])
+    tab0, tab1, tab2, tab3, tab4 = st.tabs(
+        [
+            "ℹ️ Présentation",
+            "📌 Vue générale",
+            "👥 Comportement client",
+            "🔗 Corrélations",
+            "🧩 Segmentation RFM",
+        ]
+    )
 
     # -----------------------
     # TAB 0 — Introduction
@@ -431,7 +429,9 @@ def show_data_analysis_page():
         """)
 
         st.image("images/analyse_dashboard.jpg", width=900)
-        st.markdown("💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients.")
+        st.markdown(
+            "💡 Explorez les onglets pour analyser les indicateurs, visualisations et segments clients."
+        )
 
     # -----------------------
     # TAB 1 — Vue générale
@@ -466,16 +466,13 @@ def show_data_analysis_page():
                 x="total_orders",
                 nbins=10,
                 title="Distribution du nombre de commandes",
-                template=theme
+                template=theme,
             )
             st.plotly_chart(fig_orders, use_container_width=True)
 
         with col2:
             fig_spent = px.box(
-                df,
-                y="Total Spent",
-                title="Distribution des montants dépensés (€)",
-                template=theme
+                df, y="Total Spent", title="Distribution des montants dépensés (€)", template=theme
             )
             st.plotly_chart(fig_spent, use_container_width=True)
 
@@ -498,7 +495,7 @@ def show_data_analysis_page():
                 "Avg Review Score": "Note moyenne",
                 "Days Since Last Order": "Récence (jours)",
             },
-            template=theme
+            template=theme,
         )
         st.plotly_chart(fig_behavior, use_container_width=True)
 
@@ -514,7 +511,7 @@ def show_data_analysis_page():
             text_auto=".2f",
             color_continuous_scale="RdBu",
             title="Matrice de corrélation",
-            template=theme
+            template=theme,
         )
         st.plotly_chart(fig_corr, use_container_width=True)
 
@@ -537,10 +534,9 @@ def show_data_analysis_page():
             size="Clients",
             title="Segmentation Fréquence vs Monétaire",
             labels={"F": "Fréquence", "M": "Monétaire"},
-            template=theme
+            template=theme,
         )
         st.plotly_chart(fig_rfm, use_container_width=True)
-
 
 
 if __name__ == "__main__":
