@@ -22,6 +22,7 @@ from src.config import RAW_DATA_DIR
 # Ajouter le répertoire parent au PYTHONPATH
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
+from src.ml_pipeline.model_svd.new_model import main_model
 from src.ml_pipeline.models.recommendation_model import RecommendationPipeline
 
 
@@ -168,6 +169,13 @@ def main():
     print("5. Optimiser les hyperparamètres")
 
     print("\nEntrainement termine avec succes!")
+    print("""
+          ===============================================
+          Autre modèle
+          ===============================================
+
+          """)
+    main_model()
 
 
 if __name__ == "__main__":

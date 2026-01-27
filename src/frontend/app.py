@@ -20,11 +20,13 @@ Architecture:
 """
 
 import os
+import pickle
 import sys
 import warnings
 from pathlib import Path
 
 import duckdb
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
@@ -168,48 +170,126 @@ def main():
         show_enzo_cv_page()
 
 
+def recommend(customer_id: str, k: int):
+    MODEL_PATH = "src/ml_pipeline/pkl_docs/svd_recommender.pkl"
+
+    # -----------------------------
+    # LOAD MODEL
+    # -----------------------------
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+
+    user_enc = model["user_encoder"]
+    item_enc = model["item_encoder"]
+    U = model["U"]  # embeddings utilisateurs
+    V = model["V"]  # embeddings produits
+    train_ui = model["train_ui"]  # matrice user-item (pour filtrer achats passés)
+    # Vérification que le client existe
+    if customer_id not in user_enc.classes_:
+        raise ValueError("❌ Client inconnu (non vu au training)")
+
+    # Encodage du client
+    user_id = user_enc.transform([customer_id])[0]
+
+    # Score = similarité utilisateur-produit
+    scores = V @ U[user_id]
+
+    # Exclure les produits déjà achetés
+    already_bought = train_ui[user_id].indices
+    scores[already_bought] = -np.inf
+
+    # Top-K produits
+    top_k_idx = np.argpartition(-scores, kth=k - 1)[:k]
+    top_k_idx = top_k_idx[np.argsort(-scores[top_k_idx])]
+
+    # Retour aux product_id d'origine
+    recommended_products = item_enc.inverse_transform(top_k_idx)
+
+    return recommended_products
+
+
 def show_recommendations_page():
     """Page principale de génération de recommandations."""
 
     st.markdown("## 🎯 Recommandations Personnalisées")
 
-    # Configuration des recommandations
-    col1, col2 = st.columns([2, 1])
+    models = st.selectbox("Selction du modèle", ["Model svd", "Model original"])
+    if models == "Model original":
+        # Configuration des recommandations
+        col1, col2 = st.columns([2, 1])
 
-    with col1:
-        st.markdown("### Sélection du client")
+        with col1:
+            st.markdown("### Sélection du client")
 
-        # Charger la liste des clients
-        customers = get_customers()
-        if not customers:
-            st.warning("Aucun client disponible")
-            return
+            # Charger la liste des clients
+            customers = get_customers()
+            if not customers:
+                st.warning("Aucun client disponible")
+                return
 
-        customer_id = st.selectbox(
-            "Client à analyser",
-            customers,
-            help="Sélectionnez un client pour générer ses recommandations personnalisées",
-        )
+            customer_id = st.selectbox(
+                "Client à analyser",
+                customers,
+                help="Sélectionnez un client pour générer ses recommandations personnalisées",
+            )
 
-    with col2:
-        st.markdown("### Paramètres")
-        n_recommendations = st.slider(
-            "Nombre de recommandations",
-            min_value=1,
-            max_value=20,
-            value=10,
-            help="Nombre de produits à recommander",
-        )
+        with col2:
+            st.markdown("### Paramètres")
+            n_recommendations = st.slider(
+                "Nombre de recommandations",
+                min_value=1,
+                max_value=20,
+                value=10,
+                help="Nombre de produits à recommander",
+            )
 
-    # Bouton de génération
-    if st.button("🚀 Générer les recommandations", type="primary"):
-        with st.spinner("Génération des recommandations..."):
-            recommendations_data = get_recommendations(customer_id, n_recommendations)
+        # Bouton de génération
+        if st.button("🚀 Générer les recommandations", type="primary"):
+            with st.spinner("Génération des recommandations..."):
+                recommendations_data = get_recommendations(customer_id, n_recommendations)
 
-        if recommendations_data:
-            display_recommendations(recommendations_data)
-        else:
-            st.error("Impossible de générer les recommandations")
+            if recommendations_data:
+                display_recommendations(recommendations_data)
+            else:
+                st.error("Impossible de générer les recommandations")
+    elif models == "Model svd":
+        # Configuration des recommandations
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            st.markdown("### Sélection du client (SVD)")
+
+            # Charger la liste des clients
+            customers = get_customers()
+            if not customers:
+                st.warning("Aucun client disponible")
+                st.stop()
+
+            customer_id = st.selectbox(
+                "Client à analyser (SVD)",
+                customers,
+                help="Sélectionnez un client pour générer ses recommandations SVD",
+                key="svd_customer_id",
+            )
+
+        with col2:
+            st.markdown("### Paramètres (SVD)")
+            n_recommendations = st.slider(
+                "Nombre de recommandations (SVD)",
+                min_value=1,
+                max_value=20,
+                value=10,
+                help="Nombre de produits à recommander",
+                key="svd_n_reco",
+            )
+
+        # Bouton de génération
+        if st.button("🚀 Générer les recommandations (SVD)", type="primary", key="svd_button"):
+            with st.spinner("Génération des recommandations SVD..."):
+                recommendations_data = recommend(customer_id, n_recommendations)
+                st.write(recommendations_data)
+            c1, c2, c3, c4 = st.columns(4)
+            # c1.metric()
 
 
 def display_recommendations(data):
@@ -272,6 +352,49 @@ def _load_satisfaction_model():
         return SatisfactionModel.load_model()
     except Exception:
         return None
+
+
+def precision_at_k(recommended, relevant, k: int) -> float:
+    """Precision@K = (# items pertinents dans top-K) / K"""
+    if k <= 0:
+        return 0.0
+    if len(recommended) == 0:
+        return 0.0
+    rel = set(relevant)
+    return len(set(recommended[:k]) & rel) / float(k)
+
+
+def recall_at_k(recommended, relevant, k: int) -> float:
+    """Recall@K = (# items pertinents dans top-K) / (# items pertinents)"""
+    if len(relevant) == 0:
+        return 0.0
+    rel = set(relevant)
+    return len(set(recommended[:k]) & rel) / float(len(rel))
+
+
+def average_precision_at_k(recommended, relevant, k: int) -> float:
+    """AP@K = moyenne des precision@i sur les positions i où il y a un hit."""
+    if len(relevant) == 0:
+        return 0.0
+
+    rel = set(relevant)
+    score = 0.0
+    hits = 0
+
+    for i, item in enumerate(recommended[:k], start=1):
+        if item in rel:
+            hits += 1
+            score += hits / float(i)
+
+    return score / float(min(len(rel), k))
+
+
+def hit_rate_at_k(recommended, relevant, k: int) -> float:
+    """HitRate@K = 1 si au moins un item pertinent est dans top-K, sinon 0."""
+    if len(relevant) == 0:
+        return 0.0
+    rel = set(relevant)
+    return 1.0 if len(set(recommended[:k]) & rel) > 0 else 0.0
 
 
 def show_model_performance_page():
@@ -474,6 +597,179 @@ def show_satisfaction_page():
         m = satisfaction_model.get_metrics()
         for k, v in m.items():
             st.write(f"- **{k}** : {v:.4f}" if isinstance(v, int | float) else f"- **{k}** : {v}")
+
+    st.divider()
+    st.markdown("## 🧠 Performance du modèle SVD (ranking implicite)")
+
+    st.caption(
+        "Métriques adaptées à la recommandation implicite : Precision@K, Recall@K, MAP@K, HitRate@K. "
+        "Elles évaluent la qualité du TOP-K recommandé (et non une accuracy de classification)."
+    )
+
+    # Choix des K
+    default_ks = [1, 5, 10, 20]
+    ks = st.multiselect(
+        "Choisir les valeurs de K à évaluer",
+        options=list(range(1, 51)),
+        default=default_ks,
+        help="K = taille de la liste recommandée (Top-K)",
+        key="svd_k_values",
+    )
+
+    if not ks:
+        st.info("Sélectionne au moins une valeur de K.")
+        return
+
+    # Calcul
+    try:
+        df_svd = compute_svd_metrics_for_ks(SVD_PKL_PATH, ks)
+    except FileNotFoundError:
+        st.error(f"Fichier PKL introuvable : {SVD_PKL_PATH}")
+        return
+    except Exception as e:
+        st.error(f"Erreur lors du calcul des métriques SVD : {e}")
+        return
+
+    # Affichage rapide (pour un K choisi)
+    st.markdown("### 🎯 Résumé (K sélectionné)")
+    k_focus = st.selectbox(
+        "K affiché en métriques", options=df_svd["K"].tolist(), index=0, key="svd_k_focus"
+    )
+    row = df_svd[df_svd["K"] == k_focus].iloc[0]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(f"Precision@{k_focus}", f"{row['precision']:.4f}")
+    c2.metric(f"Recall@{k_focus}", f"{row['recall']:.4f}")
+    c3.metric(f"MAP@{k_focus}", f"{row['map']:.4f}")
+    c4.metric(f"HitRate@{k_focus}", f"{row['hit_rate']:.4f}")
+
+    st.caption(f"Users évalués : {int(row['users_evaluated'])}")
+
+    # Tableau complet
+    st.markdown("### 📋 Détail des métriques par K")
+    st.dataframe(
+        df_svd.rename(
+            columns={
+                "K": "K",
+                "users_evaluated": "Users évalués",
+                "precision": "Precision@K",
+                "recall": "Recall@K",
+                "map": "MAP@K",
+                "hit_rate": "HitRate@K",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # Courbes
+    st.markdown("### 📈 Évolution des métriques en fonction de K")
+
+    df_long = df_svd.melt(
+        id_vars=["K", "users_evaluated"],
+        value_vars=["precision", "recall", "map", "hit_rate"],
+        var_name="metric",
+        value_name="value",
+    )
+
+    metric_labels = {
+        "precision": "Precision@K",
+        "recall": "Recall@K",
+        "map": "MAP@K",
+        "hit_rate": "HitRate@K",
+    }
+    df_long["metric"] = df_long["metric"].map(metric_labels)
+
+    fig = px.line(
+        df_long,
+        x="K",
+        y="value",
+        color="metric",
+        markers=True,
+        title="Métriques de ranking (SVD) vs K",
+        labels={"value": "Score", "K": "K", "metric": "Métrique"},
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Interprétation courte
+    st.markdown("#### 💡 Interprétation (SVD)")
+    st.write(
+        "- **HitRate@K** : proportion d’utilisateurs pour lesquels au moins 1 item pertinent apparaît dans le Top-K.\n"
+        "- **Recall@K** augmente souvent avec K (on retrouve plus d’achats), mais **Precision@K** peut baisser (dilution).\n"
+        "- **MAP@K** mesure la qualité de l’ordre des recommandations (plus c’est haut, mieux c’est classé)."
+    )
+
+
+SVD_PKL_PATH = "src/ml_pipeline/pkl_docs/svd_recommender.pkl"
+
+
+@st.cache_resource
+def load_svd_pack(pkl_path: str = SVD_PKL_PATH):
+    with open(pkl_path, "rb") as f:
+        return pickle.load(f)
+
+
+@st.cache_data
+def compute_svd_metrics_for_ks(pkl_path: str, ks: list[int]) -> pd.DataFrame:
+    pack = load_svd_pack(pkl_path)
+
+    U = pack["U"]
+    V = pack["V"]
+    train_ui = pack["train_ui"]
+    test_ui = pack["test_ui"]
+
+    n_users = U.shape[0]
+    n_items = V.shape[0]
+
+    results = []
+
+    for K in ks:
+        precisions, recalls, maps, hits = [], [], [], []
+        users_eval = 0
+
+        for u in range(n_users):
+            relevant_items = test_ui[u].indices
+            if len(relevant_items) == 0:
+                continue
+
+            users_eval += 1
+
+            scores = V @ U[u]
+            scores[train_ui[u].indices] = -np.inf
+
+            k_eff = min(int(K), n_items)
+            top_k = np.argpartition(-scores, kth=k_eff - 1)[:k_eff]
+            top_k = top_k[np.argsort(-scores[top_k])]
+
+            precisions.append(precision_at_k(top_k, relevant_items, K))
+            recalls.append(recall_at_k(top_k, relevant_items, K))
+            maps.append(average_precision_at_k(top_k, relevant_items, K))
+            hits.append(hit_rate_at_k(top_k, relevant_items, K))
+
+        if users_eval == 0:
+            results.append(
+                {
+                    "K": K,
+                    "users_evaluated": 0,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "map": 0.0,
+                    "hit_rate": 0.0,
+                }
+            )
+        else:
+            results.append(
+                {
+                    "K": K,
+                    "users_evaluated": users_eval,
+                    "precision": float(np.mean(precisions)),
+                    "recall": float(np.mean(recalls)),
+                    "map": float(np.mean(maps)),
+                    "hit_rate": float(np.mean(hits)),
+                }
+            )
+
+    return pd.DataFrame(results).sort_values("K")
 
 
 def show_data_analysis_page():
