@@ -42,6 +42,7 @@ data/raw/*.csv
 data/processed/*.csv
 data/models/*.joblib
 data/models/*.pkl
+*.pkl
 
 # Logs
 logs/*.log
