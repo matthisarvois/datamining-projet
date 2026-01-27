@@ -139,6 +139,7 @@ def main():
                 "🎯 Recommandations",
                 "📊 Performance du Modèle",
                 "🔍 Analyse des Données",
+                "😎 CV de Enzo Potier",
             ],
         )
 
@@ -158,6 +159,8 @@ def main():
         show_model_performance_page()
     elif page == "🔍 Analyse des Données":
         show_data_analysis_page()
+    elif page == "😎 CV de Enzo Potier":
+        show_enzo_cv_page()
 
 
 def show_recommendations_page():
@@ -604,6 +607,34 @@ def show_data_analysis_page():
             template=theme,
         )
         st.plotly_chart(fig_orders_time, width="stretch")
+
+
+def show_enzo_cv_page():
+    """Affiche le CV d'Enzo Potier dans un onglet Streamlit et propose le téléchargement."""
+    st.markdown("## 😎 CV de Enzo Potier")
+    st.write("Voici le CV de mon camarade Enzo Potier.")
+
+    cv_path = "images/cv_enzo_potier.pdf"
+
+    if os.path.exists(cv_path):
+        # Lecture du PDF pour le téléchargement
+        with open(cv_path, "rb") as f:
+            pdf_data = f.read()
+        st.download_button(
+            label="📄 Télécharger le CV",
+            data=pdf_data,
+            file_name="cv_enzo_potier.pdf",
+            mime="application/pdf",
+        )
+
+    cv_image_path = "images/cv_enzo_potier.png"  # chemin vers ton PNG
+
+    try:
+        st.image(cv_image_path, width=700)
+    except FileNotFoundError:
+        st.warning(
+            "Image du CV introuvable. Place le fichier `cv_enzo_potier.png` dans le dossier `images/`."
+        )
 
 
 if __name__ == "__main__":
