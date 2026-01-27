@@ -289,7 +289,7 @@ def show_recommendations_page():
                 recommendations_data = recommend(customer_id, n_recommendations)
                 st.write(recommendations_data)
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric()
+            # c1.metric()
 
 
 def display_recommendations(data):
