@@ -33,7 +33,7 @@ import pytest
 # Ajouter le répertoire racine au PYTHONPATH pour les imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from ml_pipeline.models.recommendation_model import OlistRecommendationModel
+from src.ml_pipeline.models.recommendation_model import OlistRecommendationModel
 
 
 @pytest.fixture(scope="session")
@@ -87,7 +87,9 @@ def sample_orders_data():
 
     data = {
         "order_id": [f"test_order_{i:03d}" for i in range(15)],
-        "customer_id": [f"test_customer_{i%10:03d}" for i in range(15)],  # Répartir sur 10 clients
+        "customer_id": [
+            f"test_customer_{i % 10:03d}" for i in range(15)
+        ],  # Répartir sur 10 clients
         "order_status": np.random.choice(
             ["delivered", "shipped", "processing"], 15, p=[0.8, 0.15, 0.05]
         ),
@@ -140,10 +142,10 @@ def sample_order_items_data():
     np.random.seed(42)
 
     data = {
-        "order_id": [f"test_order_{i%15:03d}" for i in range(20)],  # Répartir sur 15 commandes
+        "order_id": [f"test_order_{i % 15:03d}" for i in range(20)],  # Répartir sur 15 commandes
         "order_item_id": list(range(1, 21)),
-        "product_id": [f"test_product_{i%8:03d}" for i in range(20)],  # Répartir sur 8 produits
-        "seller_id": [f"seller_{i%5:03d}" for i in range(20)],
+        "product_id": [f"test_product_{i % 8:03d}" for i in range(20)],  # Répartir sur 8 produits
+        "seller_id": [f"seller_{i % 5:03d}" for i in range(20)],
         "price": np.random.uniform(20, 500, 20),
         "freight_value": np.random.uniform(5, 50, 20),
     }
@@ -260,7 +262,7 @@ def api_client():
     """
     from fastapi.testclient import TestClient
 
-    from backend.app.main import app
+    from src.backend.app.main import app
 
     return TestClient(app)
 
@@ -275,9 +277,11 @@ def setup_test_environment(monkeypatch, test_data_dir):
     - S'assure que les tests sont isolés
     """
     # Rediriger les chemins de configuration vers le répertoire de test
-    monkeypatch.setattr("config.RAW_DATA_DIR", test_data_dir / "raw")
-    monkeypatch.setattr("config.PROCESSED_DATA_DIR", test_data_dir / "processed")
-    monkeypatch.setattr("config.MODELS_DIR", test_data_dir / "models")
+    import src.config.settings as config_settings
+
+    monkeypatch.setattr(config_settings, "RAW_DATA_DIR", test_data_dir / "raw")
+    monkeypatch.setattr(config_settings, "PROCESSED_DATA_DIR", test_data_dir / "processed")
+    monkeypatch.setattr(config_settings, "MODELS_DIR", test_data_dir / "models")
 
     # Configuration pour les tests
     monkeypatch.setenv("TESTING", "true")

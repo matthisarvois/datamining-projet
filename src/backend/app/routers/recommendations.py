@@ -19,13 +19,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
-from ..schemas.recommendation import (
+from src.backend.app.schemas.recommendation import (
     CustomerRequest,
     HealthResponse,
     ModelInfoResponse,
     RecommendationResponse,
 )
-from ..services.recommendation_service import recommendation_service
+from src.backend.app.services.recommendation_service import recommendation_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -80,17 +80,17 @@ async def get_recommendations(request: CustomerRequest):
     ```
     """
     try:
-        logger.info(f"🎯 Génération de recommandations pour {request.customer_id}")
+        logger.info("Generation de recommandations pour %s", request.customer_id)
 
         response = await recommendation_service.get_recommendations(
             customer_id=request.customer_id, n_recommendations=request.n_recommendations
         )
 
-        logger.info(f"✅ {len(response.recommendations)} recommandations générées")
+        logger.info("%d recommandations generees", len(response.recommendations))
         return response
 
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la génération de recommandations: {e}")
+        logger.error("Erreur lors de la generation de recommandations: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Erreur lors de la génération de recommandations: {str(e)}"
         ) from e
@@ -115,12 +115,12 @@ async def get_model_info():
     - Debugging et amélioration
     """
     try:
-        logger.info("📊 Récupération des informations du modèle")
+        logger.info("Recuperation des informations du modele")
         model_info = await recommendation_service.get_model_info()
         return model_info
 
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la récupération des infos du modèle: {e}")
+        logger.error("Erreur lors de la recuperation des infos du modele: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Erreur lors de la récupération des informations: {str(e)}"
         ) from e
@@ -144,12 +144,12 @@ async def get_customers(
     - Exploration des données
     """
     try:
-        logger.info(f"👥 Récupération de la liste des clients (limit: {limit})")
+        logger.info("Recuperation de la liste des clients (limit: %d)", limit)
         customers = await recommendation_service.get_customer_list()
         return customers[:limit]
 
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la récupération des clients: {e}")
+        logger.error("Erreur lors de la recuperation des clients: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Erreur lors de la récupération des clients: {str(e)}"
         ) from e
@@ -184,7 +184,7 @@ async def get_recommendations_by_path(
     - Debugging et validation
     """
     try:
-        logger.info(f"🎯 Recommandations GET pour {customer_id}")
+        logger.info("Recommandations GET pour %s", customer_id)
 
         request = CustomerRequest(customer_id=customer_id, n_recommendations=n_recommendations)
 
@@ -193,7 +193,7 @@ async def get_recommendations_by_path(
         )
 
     except Exception as e:
-        logger.error(f"❌ Erreur GET recommandations: {e}")
+        logger.error("Erreur GET recommandations: %s", e)
         raise HTTPException(
             status_code=500, detail=f"Erreur lors de la génération de recommandations: {str(e)}"
         ) from e
@@ -229,7 +229,7 @@ async def clear_cache():
     """
     try:
         recommendation_service._cache.clear()
-        logger.info("🧹 Cache vidé")
+        logger.info("Cache vide")
         return {"message": "Cache vidé avec succès", "timestamp": datetime.now()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

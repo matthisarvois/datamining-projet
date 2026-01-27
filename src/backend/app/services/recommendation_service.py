@@ -18,20 +18,19 @@ from typing import Any
 
 import pandas as pd
 
-from ml_pipeline.models.recommendation_model import OlistRecommendationModel
-from ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer
-
 # Ajouter le répertoire racine au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent.parent))
 
-from backend.app.schemas.recommendation import (
+from src.backend.app.schemas.recommendation import (
     FeatureImportance,
     ModelInfoResponse,
     ModelMetrics,
     Recommendation,
     RecommendationResponse,
 )
-from config import MLConfig
+from src.config import MLConfig
+from src.ml_pipeline.models.recommendation_model import OlistRecommendationModel
+from src.ml_pipeline.preprocessing.feature_engineering import CustomerFeatureEngineer
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,7 @@ class RecommendationService:
             True si l'initialisation réussit, False sinon
         """
         try:
-            logger.info("🔄 Initialisation du service de recommandation...")
+            logger.info("Initialisation du service de recommandation...")
 
             # Charger le modèle pré-entraîné
             await self._load_model()
@@ -149,7 +148,7 @@ class RecommendationService:
         if cache_key in self._cache:
             cached_result, cached_at = self._cache[cache_key]
             if self._is_cache_valid(cached_at):
-                logger.info(f"📋 Recommandations servies depuis le cache pour {customer_id}")
+                logger.info("Recommandations servies depuis le cache pour %s", customer_id)
                 return cached_result
 
         # Obtenir les features du client
@@ -176,7 +175,7 @@ class RecommendationService:
     async def _get_customer_features(self, customer_id: str) -> dict[str, Any]:
         """Récupère les features d'un client."""
         if self.customer_features is None:
-            logger.warning("⚠️ Features clients non chargées, utilisation de features par défaut")
+            logger.warning("Features clients non chargees, utilisation de features par defaut")
             return {
                 "total_orders": None,
                 "total_spent": None,
@@ -190,7 +189,7 @@ class RecommendationService:
         if customer_id in self.customer_features.index:
             return self.customer_features.loc[customer_id].to_dict()
 
-        logger.warning(f"⚠️ Client {customer_id} non trouvé, utilisation de features par défaut")
+        logger.warning("Client %s non trouve, utilisation de features par defaut", customer_id)
         return {
             "total_orders": None,
             "total_spent": None,

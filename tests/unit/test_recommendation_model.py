@@ -28,8 +28,11 @@ import pytest
 
 # Import du module à tester
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from config import MLConfig
-from ml_pipeline.models.recommendation_model import OlistRecommendationModel, RecommendationPipeline
+from src.config import MLConfig
+from src.ml_pipeline.models.recommendation_model import (
+    OlistRecommendationModel,
+    RecommendationPipeline,
+)
 
 
 @pytest.mark.unit

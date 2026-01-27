@@ -30,7 +30,7 @@ import pytest
 
 # Import du module à tester
 sys.path.append(str(Path(__file__).parent.parent.parent))
-from ml_pipeline.preprocessing.feature_engineering import (
+from src.ml_pipeline.preprocessing.feature_engineering import (
     CustomerFeatureEngineer,
     ProductFeatureEngineer,
     RecommendationFeatureEngine,

@@ -30,11 +30,11 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
 # Ajouter le répertoire racine au PYTHONPATH
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-from backend.app.routers.recommendations import router as recommendations_router
-from backend.app.services.recommendation_service import recommendation_service
-from config import APIConfig
+from src.backend.app.routers.recommendations import router as recommendations_router
+from src.backend.app.services.recommendation_service import recommendation_service
+from src.config import LOGS_DIR, APIConfig
 
 # Configuration du logging
 logging.basicConfig(
@@ -43,7 +43,7 @@ logging.basicConfig(
     style="{",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("logs/olist_api.log", mode="a", encoding="utf-8"),
+        logging.FileHandler(str(LOGS_DIR / "olist_api.log"), mode="a", encoding="utf-8"),
     ],
 )
 
@@ -65,21 +65,21 @@ async def lifespan(app: FastAPI):
     - Ferme les connexions
     """
     # Startup
-    logger.info("🚀 Démarrage de l'application Olist Recommendation API")
+    logger.info("Demarrage de l'application Olist Recommendation API")
 
     # Initialiser le service de recommandation
     success = await recommendation_service.initialize()
     if not success:
-        logger.error("❌ Échec de l'initialisation du service")
+        logger.error("Echec de l'initialisation du service")
         # En production, vous pourriez vouloir arrêter l'application ici
         # sys.exit(1)
     else:
-        logger.info("✅ Service de recommandation initialisé")
+        logger.info("Service de recommandation initialise")
 
     yield
 
     # Shutdown
-    logger.info("🔽 Arrêt de l'application")
+    logger.info("Arret de l'application")
 
 
 # Créer l'application FastAPI
@@ -112,7 +112,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     """
     Gestionnaire global d'exceptions pour un retour d'erreur cohérent.
     """
-    logger.error(f"❌ Erreur non gérée: {exc}", exc_info=True)
+    logger.error("Erreur non geree: %s", exc, exc_info=True)
 
     return JSONResponse(
         status_code=500,
@@ -251,7 +251,7 @@ def main():
         ou
         uvicorn backend.app.main:app --reload
     """
-    logger.info("🚀 Lancement du serveur FastAPI")
+    logger.info("Lancement du serveur FastAPI")
 
     uvicorn.run(
         "backend.app.main:app",

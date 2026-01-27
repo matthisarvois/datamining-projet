@@ -1,0 +1,37 @@
+# Usage (depuis la racine du projet) :
+#   docker compose -f .devcontainer/compose.yaml up --build
+# API: http://localhost:8000 | Docs: http://localhost:8000/docs
+# UI:  http://localhost:8501
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: olist-backend
+    ports:
+      - "8000:8000"
+    command: ["uv", "run", "uvicorn", "src.backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: olist-frontend
+    ports:
+      - "8501:8501"
+    command: ["uv", "run", "streamlit", "run", "src/frontend/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    environment:
+      - API_BASE_URL=http://backend:8000/api/v1
+    depends_on:
+      backend:
+        condition: service_healthy
