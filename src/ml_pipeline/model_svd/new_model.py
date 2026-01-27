@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -141,7 +142,9 @@ def main_model():
     V = normalize(V)
 
     # 9) Sauvegarde du "modèle" (en pratique : encodeurs + embeddings + matrices)
-    with open("src/ml_pipeline/pkl_docs/svd_recommender.pkl", "wb") as f:
+    pkl_path = Path("src/ml_pipeline/pkl_docs/svd_recommender.pkl")
+    pkl_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(pkl_path, "wb") as f:
         pickle.dump(
             {
                 "user_encoder": user_enc,
