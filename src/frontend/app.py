@@ -213,7 +213,7 @@ def show_recommendations_page():
 
     st.markdown("## 🎯 Recommandations Personnalisées")
 
-    models = st.selectbox("Selction du modèle", ["Model svd", "Model original"])
+    models = st.selectbox("Sélection du modèle", ["Model svd", "Model original"])
     if models == "Model original":
         # Configuration des recommandations
         col1, col2 = st.columns([2, 1])
@@ -482,6 +482,91 @@ def show_model_performance_page():
                 "historique client, première commande, mois, jour de la semaine."
             )
 
+    # ---------- Modèle SVD (ranking implicite) ----------
+    st.markdown("---")
+    st.markdown("### 🧠 Performance du modèle SVD (ranking implicite)")
+    st.caption(
+        "Métriques adaptées à la recommandation implicite : Precision@K, Recall@K, MAP@K, HitRate@K. "
+        "Elles évaluent la qualité du TOP-K recommandé (et non une accuracy de classification)."
+    )
+    default_ks = [1, 5, 10, 20]
+    ks_svd = st.multiselect(
+        "Choisir les valeurs de K à évaluer (SVD)",
+        options=list(range(1, 51)),
+        default=default_ks,
+        help="K = taille de la liste recommandée (Top-K)",
+        key="svd_k_values_perf",
+    )
+    if not ks_svd:
+        st.info("Sélectionne au moins une valeur de K pour afficher les métriques SVD.")
+    else:
+        try:
+            df_svd = compute_svd_metrics_for_ks(SVD_PKL_PATH, ks_svd)
+        except FileNotFoundError:
+            st.warning(
+                f"Fichier PKL introuvable : {SVD_PKL_PATH}. Lancez l'entraînement du modèle SVD."
+            )
+        except Exception as e:
+            st.error(f"Erreur lors du calcul des métriques SVD : {e}")
+        else:
+            k_focus = st.selectbox(
+                "K affiché en métriques",
+                options=df_svd["K"].tolist(),
+                index=0,
+                key="svd_k_focus_perf",
+            )
+            row = df_svd[df_svd["K"] == k_focus].iloc[0]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric(f"Precision@{k_focus}", f"{row['precision']:.4f}")
+            c2.metric(f"Recall@{k_focus}", f"{row['recall']:.4f}")
+            c3.metric(f"MAP@{k_focus}", f"{row['map']:.4f}")
+            c4.metric(f"HitRate@{k_focus}", f"{row['hit_rate']:.4f}")
+            st.caption(f"Users évalués : {int(row['users_evaluated'])}")
+            st.markdown("#### 📋 Détail des métriques par K (SVD)")
+            st.dataframe(
+                df_svd.rename(
+                    columns={
+                        "K": "K",
+                        "users_evaluated": "Users évalués",
+                        "precision": "Precision@K",
+                        "recall": "Recall@K",
+                        "map": "MAP@K",
+                        "hit_rate": "HitRate@K",
+                    }
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+            df_long = df_svd.melt(
+                id_vars=["K", "users_evaluated"],
+                value_vars=["precision", "recall", "map", "hit_rate"],
+                var_name="metric",
+                value_name="value",
+            )
+            metric_labels = {
+                "precision": "Precision@K",
+                "recall": "Recall@K",
+                "map": "MAP@K",
+                "hit_rate": "HitRate@K",
+            }
+            df_long["metric"] = df_long["metric"].map(metric_labels)
+            fig_svd = px.line(
+                df_long,
+                x="K",
+                y="value",
+                color="metric",
+                markers=True,
+                title="Métriques de ranking (SVD) vs K",
+                labels={"value": "Score", "K": "K", "metric": "Métrique"},
+            )
+            st.plotly_chart(fig_svd, use_container_width=True)
+            st.markdown("##### 💡 Interprétation (SVD)")
+            st.write(
+                "- **HitRate@K** : proportion d'utilisateurs pour lesquels au moins 1 item pertinent apparaît dans le Top-K.\n"
+                "- **Recall@K** augmente souvent avec K ; **Precision@K** peut baisser (dilution).\n"
+                "- **MAP@K** mesure la qualité de l'ordre des recommandations."
+            )
+
 
 def show_satisfaction_page():
     """Page dédiée au modèle de satisfaction : prédiction et infos."""
@@ -597,107 +682,6 @@ def show_satisfaction_page():
         m = satisfaction_model.get_metrics()
         for k, v in m.items():
             st.write(f"- **{k}** : {v:.4f}" if isinstance(v, int | float) else f"- **{k}** : {v}")
-
-    st.divider()
-    st.markdown("## 🧠 Performance du modèle SVD (ranking implicite)")
-
-    st.caption(
-        "Métriques adaptées à la recommandation implicite : Precision@K, Recall@K, MAP@K, HitRate@K. "
-        "Elles évaluent la qualité du TOP-K recommandé (et non une accuracy de classification)."
-    )
-
-    # Choix des K
-    default_ks = [1, 5, 10, 20]
-    ks = st.multiselect(
-        "Choisir les valeurs de K à évaluer",
-        options=list(range(1, 51)),
-        default=default_ks,
-        help="K = taille de la liste recommandée (Top-K)",
-        key="svd_k_values",
-    )
-
-    if not ks:
-        st.info("Sélectionne au moins une valeur de K.")
-        return
-
-    # Calcul
-    try:
-        df_svd = compute_svd_metrics_for_ks(SVD_PKL_PATH, ks)
-    except FileNotFoundError:
-        st.error(f"Fichier PKL introuvable : {SVD_PKL_PATH}")
-        return
-    except Exception as e:
-        st.error(f"Erreur lors du calcul des métriques SVD : {e}")
-        return
-
-    # Affichage rapide (pour un K choisi)
-    st.markdown("### 🎯 Résumé (K sélectionné)")
-    k_focus = st.selectbox(
-        "K affiché en métriques", options=df_svd["K"].tolist(), index=0, key="svd_k_focus"
-    )
-    row = df_svd[df_svd["K"] == k_focus].iloc[0]
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric(f"Precision@{k_focus}", f"{row['precision']:.4f}")
-    c2.metric(f"Recall@{k_focus}", f"{row['recall']:.4f}")
-    c3.metric(f"MAP@{k_focus}", f"{row['map']:.4f}")
-    c4.metric(f"HitRate@{k_focus}", f"{row['hit_rate']:.4f}")
-
-    st.caption(f"Users évalués : {int(row['users_evaluated'])}")
-
-    # Tableau complet
-    st.markdown("### 📋 Détail des métriques par K")
-    st.dataframe(
-        df_svd.rename(
-            columns={
-                "K": "K",
-                "users_evaluated": "Users évalués",
-                "precision": "Precision@K",
-                "recall": "Recall@K",
-                "map": "MAP@K",
-                "hit_rate": "HitRate@K",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    # Courbes
-    st.markdown("### 📈 Évolution des métriques en fonction de K")
-
-    df_long = df_svd.melt(
-        id_vars=["K", "users_evaluated"],
-        value_vars=["precision", "recall", "map", "hit_rate"],
-        var_name="metric",
-        value_name="value",
-    )
-
-    metric_labels = {
-        "precision": "Precision@K",
-        "recall": "Recall@K",
-        "map": "MAP@K",
-        "hit_rate": "HitRate@K",
-    }
-    df_long["metric"] = df_long["metric"].map(metric_labels)
-
-    fig = px.line(
-        df_long,
-        x="K",
-        y="value",
-        color="metric",
-        markers=True,
-        title="Métriques de ranking (SVD) vs K",
-        labels={"value": "Score", "K": "K", "metric": "Métrique"},
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Interprétation courte
-    st.markdown("#### 💡 Interprétation (SVD)")
-    st.write(
-        "- **HitRate@K** : proportion d’utilisateurs pour lesquels au moins 1 item pertinent apparaît dans le Top-K.\n"
-        "- **Recall@K** augmente souvent avec K (on retrouve plus d’achats), mais **Precision@K** peut baisser (dilution).\n"
-        "- **MAP@K** mesure la qualité de l’ordre des recommandations (plus c’est haut, mieux c’est classé)."
-    )
 
 
 SVD_PKL_PATH = "src/ml_pipeline/pkl_docs/svd_recommender.pkl"

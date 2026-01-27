@@ -5,6 +5,23 @@
 
 ---
 
+## 📑 Table des matières
+
+| Section | Contenu |
+|--------|---------|
+| [🚀 Démarrage rapide](#-démarrage-rapide) | Installation, lancement, URLs |
+| [Vue d'ensemble](#vue-densemble-du-projet) | Objectifs, démonstration |
+| [Architecture](#architecture-du-système) | Composants, schéma |
+| [Installation et Configuration](#installation-et-configuration) | Prérequis, UV, Docker |
+| [Utilisation](#utilisation-du-système) | Pages Streamlit, API, entraînement |
+| [Machine Learning Pipeline](#machine-learning-pipeline) | Features, modèles (Recommandation, Satisfaction, SVD) |
+| [Structure du projet](#structure-du-projet) | Arborescence |
+| [Tests et Validation](#tests-et-validation) | Manuels, pytest |
+| [Ressources](#ressources-et-documentation) | Docs, concepts, dataset |
+| [Annexes](#annexes) | Exercices, contribution, métriques, liens |
+
+---
+
 ## 🚀 Démarrage rapide
 
 ```bash
@@ -12,7 +29,7 @@
 pip install uv
 uv sync
 uv run python src/scripts/setup.py
-uv run python src/scripts/train.py                      # Recommandation
+uv run python src/scripts/train.py                      # Recommandation + SVD
 uv run python src/scripts/train_satisfaction.py         # Satisfaction client (optionnel)
 
 # Lancer l'app (2 terminaux)
@@ -178,10 +195,11 @@ docker compose -f .devcontainer/compose.yaml run --rm backend uv run python src/
 
 | Page | Description |
 |------|-------------|
-| **Recommandations** | Sélection d’un client, génération de recommandations produits, visualisations |
-| **Performance du Modèle** | Métriques et importance des features pour le modèle de **recommandation** (API) et le modèle de **satisfaction client** (local) |
-| **Satisfaction Client** | Simulateur : saisie des caractéristiques commande/client → prédiction du score d’avis (1–5) |
-| **Analyse des Données** | Distributions, corrélations, segmentation RFM (données de démo) |
+| **🎯 Recommandations** | Sélection du modèle (original / SVD), choix d'un client, génération de recommandations et visualisations |
+| **📊 Performance du Modèle** | Trois blocs : (1) **Modèle de Recommandation** (API) — précision, AUC, importance des features ; (2) **Modèle de Satisfaction Client** — R², MAE, RMSE, importance ; (3) **Performance du modèle SVD** (ranking implicite) — Precision@K, Recall@K, MAP@K, HitRate@K selon K |
+| **😊 Satisfaction Client** | Simulateur : saisie des 11 variables (délai, retard, nb articles, montant, fret, etc.) → prédiction du score d'avis (1–5) ; expander « Métriques du modèle » |
+| **🔍 Analyse des Données** | Onglets : présentation, vue générale, comportement client, corrélations, segmentation RFM, livraison & commandes (données de démo) |
+| **😎 CV de Enzo Potier** | Affichage et téléchargement du CV (PDF/PNG dans `images/`) |
 
 ### Génération de Recommandations
 
@@ -220,13 +238,14 @@ Le système fournit plusieurs métriques :
 
 ## Entraînement des modèles
 
-Les modèles sont sauvegardés dans `data/models/`. Ordre conseillé : setup une fois, puis entraînement de chaque modèle.  
-Le modèle de **satisfaction** est requis pour la page Streamlit « Satisfaction Client » et pour les métriques « Modèle de Satisfaction Client » dans l’onglet « Performance du Modèle ».
+Les modèles sont sauvegardés dans `data/models/` et `src/ml_pipeline/pkl_docs/`. Ordre conseillé : setup une fois, puis entraînement de chaque modèle.  
+- Le modèle de **satisfaction** est requis pour la page « Satisfaction Client » et pour le bloc « Modèle de Satisfaction Client » dans « Performance du Modèle ».
+- Le modèle **SVD** est requis pour la page « Recommandations » (choix SVD) et pour le bloc « Performance du modèle SVD » dans « Performance du Modèle ».
 
-| Étape | Commande | Fichier produit |
-|-------|----------|------------------|
+| Étape | Commande | Fichier(s) produit(s) |
+|-------|----------|------------------------|
 | **1. Données** | `uv run python src/scripts/setup.py` | `data/raw/*.csv` |
-| **2. Recommandation** | `uv run python src/scripts/train.py` | `data/models/recommendation_model.joblib` |
+| **2. Recommandation + SVD** | `uv run python src/scripts/train.py` | `data/models/recommendation_model.joblib`, `src/ml_pipeline/pkl_docs/svd_recommender.pkl` |
 | **3. Satisfaction client** | `uv run python src/scripts/train_satisfaction.py` | `data/models/satisfaction_model.joblib` |
 
 ```bash
@@ -284,7 +303,17 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 
 Fichier produit : `data/models/satisfaction_model.joblib`. Entraînement : `uv run python src/scripts/train_satisfaction.py`.
 
-**Explication détaillée** (type de modèle, choix des variables, pourquoi le R² reste modéré, pipeline, limites, pistes d’amélioration) : [docs/modele_satisfaction_client.md](docs/modele_satisfaction_client.md)
+**Explication détaillée** (type de modèle, choix des variables, pourquoi le R² reste modéré, pipeline, limites, pistes d'amélioration) : [docs/modele_satisfaction_client.md](docs/modele_satisfaction_client.md)
+
+### Modèle SVD (ranking implicite)
+
+**SVD** (décomposition en valeurs singulières) pour la **recommandation implicite** (feedback binaire : acheté / non acheté) :
+- **Fichier produit** : `src/ml_pipeline/pkl_docs/svd_recommender.pkl` (généré par `train.py` à la fin de l'entraînement)
+- **Contenu** : matrices U (utilisateurs), V (produits), encodeurs, train_ui / test_ui pour l'évaluation
+- **Où l'utiliser** : page « Recommandations » (choix « Model svd ») et page « Performance du Modèle » (bloc « Performance du modèle SVD »)
+- **Métriques** : Precision@K, Recall@K, MAP@K, HitRate@K (évaluation du top-K recommandé)
+
+L'entraînement SVD est lancé automatiquement à la fin de `uv run python src/scripts/train.py` (via `src/ml_pipeline/model_svd/new_model.py`).
 
 ### Évaluation du Modèle
 
@@ -313,33 +342,34 @@ datamining-projet/
 │   │   └── app.py
 │   ├── ml_pipeline/            # Pipeline ML
 │   │   ├── models/            # Modèles (recommendation_model.py, satisfaction_model.py)
+│   │   ├── model_svd/          # SVD ranking implicite (new_model.py → svd_recommender.pkl)
 │   │   ├── preprocessing/     # Feature engineering (feature_engineering.py)
-│   │   ├── train_model.py     # Entraînement recommandation
+│   │   ├── train_model.py     # Entraînement recommandation + appel SVD
 │   │   └── train_satisfaction.py  # Entraînement satisfaction client
 │   ├── config/                 # Configuration centralisée
 │   │   ├── __init__.py
 │   │   └── settings.py        # Chemins, MLConfig, APIConfig, DataConfig
 │   └── scripts/                # Scripts exécutables
 │       ├── setup.py            # .env.example + téléchargement données
-│       ├── train.py            # Entraînement recommandation (wrapper)
+│       ├── train.py            # Entraînement recommandation + SVD (wrapper)
 │       └── train_satisfaction.py  # Entraînement satisfaction client (wrapper)
 ├── 📁 data/                   # Données (raw, processed, models)
-├── 📁 docs/                   # Documentation
-├── 📁 tests/                   # Tests miroir (un test par module de src/)
-│   ├── backend/               # Tests pour src/backend/
-│   ├── frontend/              # Tests pour src/frontend/
-│   ├── ml_pipeline/           # Tests pour src/ml_pipeline/
-│   ├── integration/           # Tests d'intégration
-│   └── unit/                  # Tests unitaires additionnels
+├── 📁 docs/                   # Documentation (modele_satisfaction_client.md, segmentation_RFM.md)
+├── 📁 tests/                   # Tests
+│   └── unit/                  # Tests unitaires (feature_engineering, recommendation_model)
 ├── 📁 .devcontainer/          # Docker (Dockerfile + compose, ports 8000 / 8501)
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
 ```
 
-## Exercices pour les Étudiants
+---
 
-### Niveau Débutant
+## Annexes
+
+### Exercices pour les Étudiants
+
+#### Niveau Débutant
 
 1. **Test des recommandations**
    - Tester avec différents clients
@@ -351,7 +381,7 @@ datamining-projet/
    - Comprendre l'impact de chaque feature
    - Identifier les features les plus prédictives
 
-### Niveau Intermédiaire
+#### Niveau Intermédiaire
 
 3. **Optimisation des hyperparamètres**
    ```python
@@ -469,14 +499,12 @@ Ce projet **Olist Recommendation System** vous donne une expérience complète d
 
 ---
 
-## Bonne chance dans votre projet !
-**🚀 Ready to build the future of e-commerce recommendations? Let's code!** ✨
----
+**Bonne chance dans votre projet !** 🚀 *Ready to build the future of e-commerce recommendations? Let's code!* ✨
 
-## Lien Trello 
+### Liens
 
-https://trello.com/b/YMaeeQZm/mon-tableau-trello
+| Ressource | URL |
+|-----------|-----|
+| **Trello** | https://trello.com/b/YMaeeQZm/mon-tableau-trello |
 
-*Dernière mise à jour : Décembre 2025*
-*Version : 1.0.0*
-*Auteur : Mohamed TRIBAK pour Master 2 SEP*
+*Dernière mise à jour : Décembre 2025 · Version : 1.0.0 · Auteur : Mohamed TRIBAK pour Master 2 SEP*
