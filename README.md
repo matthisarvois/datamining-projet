@@ -284,6 +284,8 @@ Le système utilise une approche **RFM** (Récence, Fréquence, Montant) enrichi
 
 Fichier produit : `data/models/satisfaction_model.joblib`. Entraînement : `uv run python src/scripts/train_satisfaction.py`.
 
+**Explication détaillée** (type de modèle, choix des variables, pourquoi le R² reste modéré, pipeline, limites, pistes d’amélioration) : [docs/modele_satisfaction_client.md](docs/modele_satisfaction_client.md)
+
 ### Évaluation du Modèle
 
 ```python
