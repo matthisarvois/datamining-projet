@@ -40,9 +40,10 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-# Setup + entraînement (données Olist + modèle ML) – exécution en root
+# Setup + entraînement (données Olist + modèles ML : recommandation + satisfaction)
 RUN uv run python src/scripts/setup.py \
-    && uv run python src/scripts/train.py
+    && uv run python src/scripts/train.py \
+    && uv run python src/scripts/train_satisfaction.py
 
 # Donner à appuser la propriété de tout /app (dont .venv) pour que uv run puisse modifier l’install editable au démarrage
 RUN mkdir -p /app/.cache \

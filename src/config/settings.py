@@ -25,6 +25,16 @@ class MLConfig:
     RANDOM_STATE = 42
     CV_FOLDS = 5
     RECOMMENDATION_MODEL_FILE = MODELS_DIR / "recommendation_model.joblib"
+    SATISFACTION_MODEL_FILE = MODELS_DIR / "satisfaction_model.joblib"
+    # Paramètres du modèle de satisfaction (régression review_score 1–5)
+    SATISFACTION_MODEL_PARAMS = {
+        "max_iter": 200,
+        "max_depth": 8,
+        "learning_rate": 0.05,
+        "min_samples_leaf": 20,
+        "l2_regularization": 0.1,
+        "random_state": 42,
+    }
     FEATURE_PIPELINE_FILE = MODELS_DIR / "feature_pipeline.joblib"
     CUSTOMER_FEATURES_FILE = PROCESSED_DATA_DIR / "customer_features.csv"
     PRODUCT_FEATURES_FILE = RAW_DATA_DIR / "olist_products_dataset.csv"
