@@ -20,6 +20,8 @@ RUN pip install --no-cache-dir uv
 # Copier les fichiers de dépendances (context = racine projet)
 COPY pyproject.toml uv.lock .python-version ./
 COPY .pre-commit-config.yaml ./
+# README.md requis par hatchling pour le build editable (readme = "README.md" dans pyproject.toml)
+COPY README.md ./
 
 # Installer les dépendances avec UV (prod + dev + test : pre-commit, ruff, pytest, etc.)
 RUN uv sync --frozen --extra dev --extra test
@@ -42,8 +44,12 @@ RUN adduser \
 RUN uv run python src/scripts/setup.py \
     && uv run python src/scripts/train.py
 
-# Permissions pour data/ et logs/
-RUN chown -R appuser:appuser /app/data /app/logs 2>/dev/null || true
+# Donner à appuser la propriété de tout /app (dont .venv) pour que uv run puisse modifier l’install editable au démarrage
+RUN mkdir -p /app/.cache \
+    && chown -R appuser:appuser /app
+
+# uv et autres outils utilisent $HOME/.cache : définir HOME=/app pour l’utilisateur appuser
+ENV HOME=/app
 
 USER appuser
 
